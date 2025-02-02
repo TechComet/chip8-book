@@ -1,57 +1,57 @@
-# Setup
+# الإعداد
 
-Since the eventual goal of this project is to have an emulator which can be built for both the desktop and a web browser, we're going to structure this project slightly unusually. Between the two builds, the actual emulation of the Chip-8 system should be exactly the same, only things like reading in a file and displaying the screen will be different between desktop and browser. To that end, we will create the backend, which I will call the *core*, as its own crate to be used by both our future frontends.
+نظرًا لأن الهدف النهائي لهذا المشروع هو الحصول على مُحاكي يمكن بناؤه لكل من سطح المكتب ومتصفح الويب، سنقوم ببناء هذا المشروع بشكل غير معتاد قليلاً. بين الإصدارين، يجب أن يكون المحاكي الفعلي لنظام Chip-8 متماثلًا تمامًا، فقط أشياء مثل قراءة الملف وعرض الشاشة ستكون مختلفة بين سطح المكتب والمتصفح. لهذا الغرض، سنقوم بإنشاء الواجهة الخلفية، والتي سأسميها *النواة*، كوحدة مستقلة يمكن استخدامها من قبل واجهاتنا المستقبلية.
 
-Move into the folder where you will store your project and run the following command. Do not include the `$`, that is simply to indicate that this is a terminal instruction.
+انتقل إلى المجلد حيث ستخزن مشروعك وقم بتنفيذ الأمر التالي. لا تقم بتضمين رمز `$`، فهو ببساطة للإشارة إلى أن هذا أمر في الطرفية.
 
 ```
 $ cargo init chip8_core --lib
 ```
 
-The `--lib` flag tells `cargo` to create a library rather than an executable module. This is where our emulation backend will go. I called it `chip8_core` for the purposes of this project, but you are free to call it whatever you like.
+علم `--lib` يخبر `cargo` بإنشاء مكتبة بدلاً من وحدة تنفيذية. هذا هو المكان الذي سيتم فيه وضع واجهة المحاكي الخلفية. لقد أسميتها `chip8_core` لأغراض هذا المشروع، ولكنك حر في تسميتها كما تشاء.
 
-As for the frontend, we'll create an additional crate to hold that code:
+أما بالنسبة للواجهة الأمامية، سنقوم بإنشاء وحدة إضافية لحفظ هذا الكود:
 
 ```
 $ cargo init desktop
 ```
 
-Unlike our core, this creates an actual executable project. If you've done it correctly, your folder structure should now look like this:
+على عكس النواة، فإن هذا ينشئ مشروعًا تنفيذيًا فعليًا. إذا قمت بذلك بشكل صحيح، يجب أن يبدو هيكل المجلدات الخاص بك الآن كما يلي:
 
-![Initial file structure](img/init_tree.png)
+![هيكل الملفات الأولي](img/init_tree.png)
 
-All that remains is to tell our `desktop` frontend where to find `chip8_core`. Open up `desktop/Cargo.toml` and under `[dependencies]` add the line:
+كل ما تبقى هو إخبار واجهة `desktop` الأمامية عن مكان العثور على `chip8_core`. افتح ملف `desktop/Cargo.toml` وأضف السطر التالي تحت `[dependencies]`:
 
 ```toml
 chip8_core = { path = "../chip8_core" }
 ```
 
-Since  `chip8_core` is currently empty, this doesn't actually add anything, but it's something that will need to be done eventually. Go ahead and try and compile and run the project, just to be sure everything is working. From inside the `desktop` directory, run:
+نظرًا لأن `chip8_core` فارغة حاليًا، فإن هذا لا يضيف أي شيء فعليًا، ولكنه شيء سيحتاج إلى القيام به في النهاية. حاول تجميع وتشغيل المشروع، فقط للتأكد من أن كل شيء يعمل. من داخل مجلد `desktop`، قم بتنفيذ:
 
 ```
 $ cargo run
 ```
 
-If everything has been setup correctly, "Hello, world!" should print out. Great! Next, we'll begin emulating the CPU and start creating something a little more interesting.
+إذا تم الإعداد بشكل صحيح، يجب أن يظهر "Hello, world!". رائع! بعد ذلك، سنبدأ في محاكاة وحدة المعالجة المركزية وبدء إنشاء شيء أكثر إثارة للاهتمام.
 
-## Defining our Emulator
+## تعريف المحاكي
 
-The most fundamental part of the system is the CPU, so we will begin there when creating our emulator. For the time being, we will mostly be developing the  `chip8_core` backend, then coming back to supply our frontend when it's well along. We will begin by working in the `chip8_core/src/lib.rs` file (you can delete the auto-generated `test` code). Before we add any functionality, let's refresh some of the concepts of what we're about to do.
+الجزء الأساسي من النظام هو وحدة المعالجة المركزية، لذا سنبدأ من هناك عند إنشاء المحاكي. في الوقت الحالي، سنقوم بتطوير واجهة `chip8_core` الخلفية بشكل أساسي، ثم نعود لتوفير واجهتنا الأمامية عندما نكون قد تقدمنا بشكل جيد. سنبدأ بالعمل في ملف `chip8_core/src/lib.rs` (يمكنك حذف كود الاختبار الذي تم إنشاؤه تلقائيًا). قبل أن نضيف أي وظائف، دعنا نسترجع بعض المفاهيم حول ما نحن على وشك القيام به.
 
-Emulation is simply executing a program originally written for a different system, so it functions very similarly to the execution of a modern computer program. When running any old program, a line of code is read, understood by the computer to perform some task such as modifying a variable, making a comparison, or jumping to a different line of code; that action is then taken, and the execution moves to the next line to repeat this process. If you've studied compilers, you'll know that when a system is running code, it's not doing it line by line, but instead converts the code into instructions understood by the processor, and then performs this loop upon those. This is exactly how our emulator will function. We will traverse value by value in our game program, __fetching__ the instruction stored there, __decoding__ the operation that must be done, and then __executing__ it, before moving on to the next. This *fetch-decode-execute* loop will form the core of our CPU emulation.
+المحاكاة هي ببساطة تنفيذ برنامج تم كتابته أصلاً لنظام مختلف، لذا فهي تعمل بشكل مشابه جدًا لتنفيذ برنامج كمبيوتر حديث. عند تشغيل أي برنامج قديم، يتم قراءة سطر من الكود، ويتم فهمه من قبل الكمبيوتر لأداء مهمة ما مثل تعديل متغير، أو إجراء مقارنة، أو القفز إلى سطر مختلف من الكود؛ ثم يتم تنفيذ هذا الإجراء، وينتقل التنفيذ إلى السطر التالي لتكرار هذه العملية. إذا كنت قد درست المترجمات، فستعرف أنه عند تشغيل النظام للكود، فإنه لا يقوم بذلك سطرًا بسطر، بل يحول الكود إلى تعليمات يفهمها المعالج، ثم يقوم بتنفيذ هذه الحلقة على تلك التعليمات. هذا بالضبط كيف سيعمل المحاكي الخاص بنا. سنقوم باجتياز القيم واحدة تلو الأخرى في برنامج اللعبة، __جلب__ التعليمات المخزنة هناك، __فك تشفير__ العملية التي يجب القيام بها، ثم __تنفيذها__، قبل الانتقال إلى التالي. هذه الحلقة *الجلب-فك التشفير-التنفيذ* ستشكل جوهر محاكاة وحدة المعالجة المركزية.
 
-With this in mind, let's begin by defining a class which will manage our emulator. In `lib.rs`, we'll add a new empty struct:
+مع أخذ ذلك في الاعتبار، لنبدأ بتعريف فئة ستقوم بإدارة المحاكي الخاص بنا. في `lib.rs`، سنضيف بنية جديدة فارغة:
 
 ```rust
 pub struct Emu {
 }
 ```
 
-This struct will be the main object for our emulation backend, and thus must handle running the actual game, and be able to pass need information back and forth from the frontend (such as what's on the screen and button presses).
+هذه البنية ستكون الكائن الرئيسي لواجهة المحاكي الخلفية، وبالتالي يجب أن تتعامل مع تشغيل اللعبة الفعلية، وأن تكون قادرة على تمرير المعلومات المطلوبة ذهابًا وإيابًا من الواجهة الأمامية (مثل ما هو موجود على الشاشة وضغطات الأزرار).
 
-## Program Counter
+## عداد البرنامج
 
-But what to put in our `Emu` object? As discussed previously, the program needs to know where in the game it's currently executing. All CPUs accomplish this by simply keeping an index of the current instruction, stored into a special *register* known as the *Program Counter*, or PC for short. This will be key for the *fetch* portion of our loop, and will increment through the game as it runs, and can even be modified manually by some instructions (for things such as jumping into a different section of code or calling a subroutine). Let's add this to our struct:
+ولكن ماذا نضع في كائن `Emu` الخاص بنا؟ كما ناقشنا سابقًا، يحتاج البرنامج إلى معرفة مكان التنفيذ الحالي في اللعبة. تقوم جميع وحدات المعالجة المركزية بتحقيق ذلك عن طريق الاحتفاظ بفهرس للتعليمة الحالية، مخزنة في *سجل* خاص يعرف باسم *عداد البرنامج*، أو PC اختصارًا. سيكون هذا مفتاحًا لجزء *الجلب* من الحلقة، وسيزداد خلال اللعبة أثناء تشغيلها، ويمكن حتى تعديله يدويًا بواسطة بعض التعليمات (لأشياء مثل القفز إلى قسم مختلف من الكود أو استدعاء subroutine). دعنا نضيف هذا إلى البنية:
 
 ```rust
 pub struct Emu {
@@ -59,9 +59,9 @@ pub struct Emu {
 }
 ```
 
-## RAM
+## الذاكرة العشوائية (RAM)
 
-While we could read from our game file every time we need a new instruction, this is very slow, inefficient, and simply not how real systems do it. Instead, the Chip-8 is designed to copy the entire game program into its own RAM space, where it can then read and written to as needed. It should be noted that many systems, such as the Game Boy, do not allow the CPU to overwrite area of memory with the game stored in it (you wouldn't want a bug to completely corrupt game code). However, the Chip-8 has no such restriction. Since the Chip-8 was never a physical system, there isn't an official standard for how much memory it should have. However, it was originally designed to be implemented on computers with 4096 bytes (4 KB) of RAM, so that's how much we shall give it as well. Most programs won't come close to using it all, but it's there if they need it. Let's define that in our program.
+بينما يمكننا القراءة من ملف اللعبة في كل مرة نحتاج فيها إلى تعليمة جديدة، إلا أن هذا بطيء جدًا وغير فعال، وببساطة ليس كيف تعمل الأنظمة الحقيقية. بدلاً من ذلك، تم تصميم Chip-8 لنسخ برنامج اللعبة بالكامل في مساحة الذاكرة العشوائية الخاصة به، حيث يمكن بعد ذلك القراءة منه والكتابة إليه حسب الحاجة. تجدر الإشارة إلى أن العديد من الأنظمة، مثل Game Boy، لا تسمح لوحدة المعالجة المركزية بالكتابة فوق مناطق الذاكرة التي يتم تخزين اللعبة فيها (لن ترغب في أن يتسبب خطأ في إفساد كود اللعبة بالكامل). ومع ذلك، فإن Chip-8 لا يحتوي على مثل هذا القيد. نظرًا لأن Chip-8 لم يكن نظامًا ماديًا أبدًا، فلا يوجد معيار رسمي لكمية الذاكرة التي يجب أن يحتويها. ومع ذلك، فقد تم تصميمه في الأصل ليتم تنفيذه على أجهزة كمبيوتر تحتوي على 4096 بايت (4 كيلوبايت) من الذاكرة العشوائية، لذا هذا ما سنمنحه أيضًا. لن تستخدم معظم البرامج كل هذه الذاكرة، لكنها موجودة إذا احتاجت إليها. دعنا نحدد ذلك في برنامجنا.
 
 ```rust
 const RAM_SIZE: usize = 4096;
@@ -73,9 +73,9 @@ pub struct Emu {
 
 ```
 
-## The display
+## الشاشة
 
-Chip-8 uses a 64x32 monochrome display (1 bit per pixel). There's nothing too special about this, however it is one of the few things in our backend that will need to be accessible to our various frontends, and to the user. Unlike many systems, Chip-8 does not automatically clear its screen to redraw every frame, instead the screen state is maintained, and new sprites are drawn onto it (there is a clear screen command however). We can keep this screen data in an array in our Emu object. Chip-8 is also more basic than most systems as we only have to deal with two colors - black and white. Since this is a 1-bit display, we can simply store an array of booleans like so:
+يستخدم Chip-8 شاشة أحادية اللون بدقة 64x32 (1 بت لكل بكسل). لا يوجد شيء خاص جدًا في هذا، ومع ذلك فهو أحد الأشياء القليلة في واجهتنا الخلفية التي يجب أن تكون قابلة للوصول من قبل واجهاتنا الأمامية المختلفة، وللمستخدم. على عكس العديد من الأنظمة، لا يقوم Chip-8 بمسح شاشته تلقائيًا لإعادة الرسم في كل إطار، بدلاً من ذلك يتم الحفاظ على حالة الشاشة، ويتم رسم الرسومات الجديدة عليها (هناك أمر لمسح الشاشة). يمكننا الاحتفاظ ببيانات الشاشة هذه في مصفوفة في كائن Emu الخاص بنا. يعتبر Chip-8 أيضًا أكثر أساسية من معظم الأنظمة حيث أننا نتعامل فقط مع لونين - الأسود والأبيض. نظرًا لأن هذه شاشة 1 بت، يمكننا ببساطة تخزين مصفوفة من القيم المنطقية كما يلي:
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -91,11 +91,11 @@ pub struct Emu {
 
 ```
 
-You'll also notice that unlike our previous constant, we've defined the screen dimensions as public constants. This is one of the few pieces of information that the frontend will need to actually draw the screen.
+ستلاحظ أيضًا أنه على عكس الثابت السابق، قمنا بتعريف أبعاد الشاشة كثوابت عامة. هذه واحدة من القطع القليلة من المعلومات التي ستكون الواجهة الأمامية بحاجة إليها لرسم الشاشة فعليًا.
 
-## V Registers
+## سجلات V
 
-While the system has quite a bit of RAM to work with, RAM access is usually considered fairly slow (but still orders of magnitude faster than reading from disc). To speed things up, the Chip-8 defines sixteen 8-bit *registers* which the game can use as it pleases for much faster operation. These are referred to as the *V registers*, and are usually numbered in hex from V0 to VF (I'm honestly not sure what the *V* stands for), and we'll group them together in one array in our Emu struct.
+بينما يحتوي النظام على قدر كبير من الذاكرة العشوائية للعمل بها، يعتبر الوصول إلى الذاكرة العشوائية بطيئًا نسبيًا (ولكنه لا يزال أسرع بكثير من القراءة من القرص). لتسريع الأمور، يعرّف Chip-8 ستة عشر سجلًا من 8 بت يمكن للعبة استخدامها كما تشاء لعمليات أسرع. يُشار إلى هذه السجلات باسم *سجلات V*، وعادة ما يتم ترقيمها بالنظام الست عشري من V0 إلى VF (لست متأكدًا تمامًا مما يعنيه الحرف *V*)، وسنقوم بتجميعها معًا في مصفوفة واحدة في بنية Emu الخاصة بنا.
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -113,9 +113,9 @@ pub struct Emu {
 
 ```
 
-## I Register
+## سجل I
 
-There is also another 16-bit register known as the *I register*, which is used for indexing into RAM for reads and writes. We'll get into the finer details of how this works later on, for now we simply need to have it.
+هناك أيضًا سجل آخر من 16 بت يعرف باسم *سجل I*، والذي يستخدم للفهرسة في الذاكرة العشوائية للقراءة والكتابة. سنتعمق في التفاصيل الدقيقة لكيفية عمل هذا لاحقًا، ولكن في الوقت الحالي نحتاج فقط إلى وجوده.
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -134,9 +134,9 @@ pub struct Emu {
 
 ```
 
-## The stack
+## المكدس
 
-The CPU also has a small *stack*, which is an array of 16-bit values that the CPU can read and write to. The stack differs from regular RAM as the stack can only be read/written to via a "Last In, First Out (LIFO)" principle (like a stack of pancakes!), when you go to grab (pop) a value, you remove the last one you added (pushed). Unlike many systems, the stack is not general purpose. The only times the stack is allowed to be used is when you are entering or exiting a subroutine, where the stack is used to know where you started so you can return after the routine ends. Again, Chip-8 doesn't officially state how many numbers the stack can hold, but 16 is a typical number for emulation developers. There are a number of different ways we could implement our stack, perhaps the easiest way would be to use the `std::collections::VecDeque` object from Rust's standard library. This works fine for a Desktop-only build, however at the time of writing, many items in the `std` library don't work for WebAssembly builds. Instead we will do it the old fashioned way, with a statically sized array and an index so we know where the top of the stack is, known as the *Stack Pointer* (SP).
+تحتوي وحدة المعالجة المركزية أيضًا على *مكدس* صغير، وهو عبارة عن مصفوفة من القيم ذات 16 بت يمكن لوحدة المعالجة المركزية القراءة منها والكتابة إليها. يختلف المكدس عن الذاكرة العشوائية العادية حيث يمكن فقط القراءة/الكتابة من/إلى المكدس عبر مبدأ "آخر داخل، أول خارج (LIFO)" (مثل كومة من الفطائر!)، عندما تذهب لالتقاط (إخراج) قيمة، فإنك تزيل آخر قيمة قمت بإضافتها (إدخالها). على عكس العديد من الأنظمة، لا يُستخدم المكدس لأغراض عامة. الأوقات الوحيدة المسموح فيها باستخدام المكدس هي عند الدخول أو الخروج من subroutine، حيث يتم استخدام المكدس لمعرفة المكان الذي بدأت منه حتى تتمكن من العودة بعد انتهاء الروتين. مرة أخرى، لا يحدد Chip-8 رسميًا عدد الأرقام التي يمكن أن يحتفظ بها المكدس، ولكن 16 هو رقم شائع لمطوري المحاكاة. هناك عدد من الطرق المختلفة التي يمكننا من خلالها تنفيذ المكدس الخاص بنا، ربما تكون أسهل طريقة هي استخدام الكائن `std::collections::VecDeque` من مكتبة Rust القياسية. يعمل هذا بشكل جيد لبناء سطح المكتب فقط، ولكن في وقت كتابة هذا المقال، لا تعمل العديد من العناصر في مكتبة `std` مع إصدارات WebAssembly. بدلاً من ذلك، سنقوم بذلك بالطريقة القديمة، باستخدام مصفوفة ذات حجم ثابت وفهرس حتى نعرف مكان الجزء العلوي من المكدس، والمعروف باسم *مؤشر المكدس* (SP).
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -158,13 +158,13 @@ pub struct Emu {
 
 ```
 
-## The keys
+## الأزرار
 
-Chip-8 supports a surprisingly large 16 different keys, typically numbered in hexadecimal from 0 through 9, A through F. The keys are arranged similarly to a telephone layout, with A and B placed to either side of 0, and C thru F placed on the right column, making a 4x4 grid.
+يدعم Chip-8 عددًا كبيرًا بشكل مدهش من الأزرار يصل إلى 16 زرًا، وعادة ما يتم ترقيمها بالنظام الست عشري من 0 إلى 9، ومن A إلى F. يتم ترتيب الأزرار بشكل مشابه لتخطيط الهاتف، مع وضع A و B على جانبي 0، و C إلى F على العمود الأيمن، مما يشكل شبكة 4x4.
 
-![Keyboard to Chip-8 key layout](img/input_layout.png)
+![تخطيط لوحة المفاتيح إلى أزرار Chip-8](img/input_layout.png)
 
-We need to keep track of which of the keys are pressed, thus we can use an array of booleans to track the states.
+نحتاج إلى تتبع الأزرار التي يتم الضغط عليها، وبالتالي يمكننا استخدام مصفوفة من القيم المنطقية لتتبع الحالات.
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -188,10 +188,9 @@ pub struct Emu {
 
 ```
 
+## المؤقتات
 
-## The timers
-
-This has been a lot to process at once, but we're now at the final items. Chip-8 also has two other special registers that it uses as *timers*. The first, the *Delay Timer* is used by the system as a typical timer, counting down every cycle and performing some action if it hits 0. The *Sound Timer* on the other hand, also counts down every clock cycle, but upon hitting 0 emits a noise. Setting the *Sound Timer* to 0 is the only way to emit audio on the Chip-8, as we will see later. These are both 8-bit registers, and must be supported for us to continue.
+لقد كان هذا كثيرًا للتعامل معه دفعة واحدة، ولكننا الآن في العناصر النهائية. يحتوي Chip-8 أيضًا على سجلين خاصين آخرين يستخدمهما كمؤقتات. الأول، *مؤقت التأخير*، يستخدمه النظام كمؤقت عادي، حيث يقوم بالعد التنازلي في كل دورة ويقوم ببعض الإجراءات إذا وصل إلى 0. أما *مؤقت الصوت*، فيقوم أيضًا بالعد التنازلي في كل دورة ساعة، ولكن عند الوصول إلى 0 يصدر صوتًا. تعيين *مؤقت الصوت* إلى 0 هو الطريقة الوحيدة لإصدار الصوت على Chip-8، كما سنرى لاحقًا. كلاهما عبارة عن سجلات 8 بت، ويجب دعمهما حتى نتمكن من المتابعة.
 
 ```rust
 pub const SCREEN_WIDTH: usize = 64;
@@ -216,16 +215,16 @@ pub struct Emu {
 }
 ```
 
-## Initialization
+## التهيئة
 
-That should do it for now, let's go ahead and implement a `new` constructor for this class before we move onto the next part. Following the `struct` definition, we'll implement and set the default values:
+هذا يكفي في الوقت الحالي، دعنا ننفذ مُنشئ `new` لهذه الفئة قبل أن ننتقل إلى الجزء التالي. بعد تعريف `struct`، سنقوم بتنفيذ وتعيين القيم الافتراضية:
 
 ```rust
-// -- Unchanged code omitted --
+// -- الكود غير المتغير تم حذفه --
 
 const START_ADDR: u16 = 0x200;
 
-// -- Unchanged code omitted --
+// -- الكود غير المتغير تم حذفه --
 
 impl Emu {
     pub fn new() -> Self {
@@ -245,8 +244,8 @@ impl Emu {
 }
 ```
 
-Everything seems pretty straightforward, we simply initialize all values and arrays to zero... except for our Program Counter, which gets set to 0x200 (512 in decimal). I mentioned the reasoning behind this in the previous chapter, but the emulator has to know where the beginning of the program is, and it is Chip-8 standard that the beginning of all Chip-8 programs will be loaded in starting at RAM address 0x200. This number will come up again, so we've defined it as a constant.
+يبدو كل شيء واضحًا إلى حد ما، نقوم ببساطة بتهيئة جميع القيم والمصفوفات إلى الصفر... باستثناء عداد البرنامج (Program Counter)، الذي يتم تعيينه إلى 0x200 (أي 512 بالنظام العشري). لقد ذكرت السبب وراء ذلك في الفصل السابق، ولكن يجب على المحاكي أن يعرف مكان بداية البرنامج، ومن المعيار في نظام Chip-8 أن يتم تحميل بداية جميع برامج Chip-8 من عنوان الذاكرة 0x200. هذا الرقم سيظهر مرة أخرى، لذا قمنا بتعريفه كقيمة ثابتة.
 
-That wraps up this part! With the basis of our emulator underway, we can begin to implement the execution!
+بهذا نكون قد انتهينا من هذا الجزء! مع وضع الأساس لمحاكاتنا، يمكننا البدء في تنفيذ عملية التنفيذ!
 
 \newpage
