@@ -1,14 +1,14 @@
-# Implementing Emulation Methods
+# تنفيذ طرق المحاكاة
 
-We have now created our `Emu` struct and defined a number of variables for it to manage, as well as defined an initialization function. Before we move on, there are a few useful methods we should add to our object now which will come in use once we begin implementation of the instructions.
+لقد أنشأنا الآن بنية `Emu` وحددنا عددًا من المتغيرات لها لإدارتها، بالإضافة إلى تحديد وظيفة التهيئة. قبل أن ننتقل، هناك بعض الطرق المفيدة التي يجب أن نضيفها إلى كائننا الآن والتي ستكون مفيدة بمجرد أن نبدأ في تنفيذ التعليمات.
 
-## Push and Pop
+## Push و Pop
 
-We have added both a `stack` array, as well as a pointer `sp` to manage the CPU's stack, however it will be useful to implement both a `push` and `pop` method so we can access it easily.
+لقد أضفنا كلًا من مصفوفة `stack` ومؤشر `sp` لإدارة مكدس وحدة المعالجة المركزية، ومع ذلك سيكون من المفيد تنفيذ كل من وظيفتي `push` و `pop` حتى نتمكن من الوصول إليها بسهولة.
 
 ```rust
 impl Emu {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     fn push(&mut self, val: u16) {
         self.stack[self.sp as usize] = val;
@@ -20,23 +20,23 @@ impl Emu {
         self.stack[self.sp as usize]
     }
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-These are pretty straightforward. `push` adds the given 16-bit value to the spot pointed to by the Stack Pointer, then moves the pointer to the next position. `pop` performs this operation in reverse, moving the SP back to the previous value then returning what is there. Note that attempting to pop an empty stack results in an underflow panic[^1]. You are welcome to add extra handling here if you like, but in the event this were to occur, that would indicate a bug with either our emulator or the game code, so I feel that a complete panic is acceptable.
+هذه الوظائف واضحة جدًا. `push` تضيف القيمة المعطاة التي تبلغ 16 بت إلى المكان الذي يشير إليه مؤشر المكدس، ثم تحرك المؤشر إلى الموضع التالي. `pop` تنفذ هذه العملية بشكل عكسي، حيث تحرك مؤشر المكدس إلى القيمة السابقة ثم تعيد ما يوجد هناك. لاحظ أن محاولة إجراء `pop` على مكدس فارغ يؤدي إلى حدوث خطأ تحت التدفق (underflow panic)[^1]. يمكنك إضافة معالجة إضافية هنا إذا أردت، ولكن في حالة حدوث ذلك، فإن ذلك يشير إلى وجود خلل في المحاكي أو كود اللعبة، لذلك أعتقد أن حدوث خطأ كامل مقبول.
 
-## Font Sprites
+## خطوط الرموز (Font Sprites)
 
-We haven't yet delved into how the Chip-8 screen display works, but the gist for now is that it renders *sprites* which are stored in memory to the screen, one line at a time. It is up to the game developer to correctly load their sprites before copying them over. However wouldn't it be nice if the system automatically had sprites for commonly used things, such as numbers? I mentioned earlier that our PC will begin at address 0x200, leaving the first 512 intentionally empty. Most modern emulators will use that space to store the sprite data for font characters of all the hexadecimal digits, that is characters of 0-9 and A-F. We could store this data at any fixed position in RAM, but this space is already defined as empty anyway. Each character is made up of five rows of eight pixels, with each row using a byte of data, meaning that each letter altogether takes up five bytes of data. The following diagram illustrates how a character is stored as bytes.
+لم نتعمق بعد في كيفية عمل شاشة عرض Chip-8، ولكن الفكرة الأساسية الآن هي أنها تعرض *الرموز* (sprites) التي يتم تخزينها في الذاكرة على الشاشة، سطرًا واحدًا في كل مرة. يقع على عاتق مطور اللعبة تحميل الرموز بشكل صحيح قبل نسخها إلى الشاشة. ولكن ألن يكون من الجميل إذا كان النظام يحتوي تلقائيًا على رموز للأشياء الشائعة الاستخدام، مثل الأرقام؟ لقد ذكرت سابقًا أن عداد البرنامج (PC) سيبدأ من العنوان 0x200، تاركًا أول 512 بايت فارغة عن قصد. تستخدم معظم المحاكيات الحديثة هذا المساحة لتخزين بيانات الرموز لأحرف الخط الخاصة بجميع الأرقام السداسية عشرية، أي الأحرف من 0-9 و A-F. يمكننا تخزين هذه البيانات في أي موقع ثابت في الذاكرة العشوائية (RAM)، ولكن هذه المساحة محددة بالفعل على أنها فارغة على أي حال. يتكون كل حرف من خمسة صفوف من ثمانية وحدات بكسل، ويستخدم كل صف بايت واحد من البيانات، مما يعني أن كل حرف يستغرق خمسة بايتات من البيانات بشكل كامل. يوضح الرسم التالي كيفية تخزين الحرف كبايتات.
 
-[^1] *Underflow* is when the value of an unsigned variable goes from above zero to below zero. In some languages the value would then "roll over" to the highest possible size, but in Rust this leads to a runtime error and needs to be handled differently if desired. The same goes for values exceeding the maximum possible value, known as *overflow*.
+[^1] *التدفق تحت الصفر* (Underflow) هو عندما تتحول قيمة متغير غير موقعة من فوق الصفر إلى تحت الصفر. في بعض اللغات، قد "تدور" القيمة إلى أعلى قيمة ممكنة، ولكن في Rust يؤدي هذا إلى حدوث خطأ في وقت التشغيل ويجب التعامل معه بشكل مختلف إذا كان مطلوبًا. الأمر نفسه ينطبق على القيم التي تتجاوز القيمة القصوى الممكنة، والمعروفة باسم *التدفق فوق الصفر* (overflow).
 
 \newpage
 
-![Chip-8 Font Sprite](img/font_diagram.png)
+![رموز خط Chip-8](img/font_diagram.png)
 
-On the right, each row is encoded into binary. Each pixel is assigned a bit, which corresponds to whether that pixel will be white or black. *Every* sprite in Chip-8 is eight pixels wide, which means a pixel row requires 8-bits (1 byte). The above diagram shows the layout of the "1" character sprite. The sprites don't need all 8 bits of width, so they all have black right halves. Sprites have been created for all of the hexadecimal digits, and are required to be present somewhere in RAM for some games to function. Later in this guide we will cover the instruction that handles these sprites, which will show how these are loaded and how the emulator knows where to find them. For now, we simply need to define them. We will do so with a constant array of bytes; at the top of `lib.rs`, add:
+على اليمين، يتم ترميز كل صف في شكل ثنائي. يتم تعيين كل بكسل إلى بت، والذي يتوافق مع ما إذا كان هذا البكسل سيكون أبيض أو أسود. *كل* الرموز في Chip-8 بعرض ثمانية وحدات بكسل، مما يعني أن صف البكسل يتطلب 8 بت (1 بايت). يوضح الرسم أعلاه تخطيط رمز الحرف "1". لا تحتاج الرموز إلى جميع وحدات البت الثمانية من العرض، لذا فإن جميعها تحتوي على نصف أيمن أسود. تم إنشاء رموز لجميع الأرقام السداسية عشرية، ويجب أن تكون موجودة في مكان ما في الذاكرة العشوائية لكي تعمل بعض الألعاب. لاحقًا في هذا الدليل سنغطي التعليمات التي تتعامل مع هذه الرموز، والتي ستوضح كيفية تحميلها وكيف يعرف المحاكي مكان العثور عليها. في الوقت الحالي، نحتاج ببساطة إلى تعريفها. سنفعل ذلك باستخدام مصفوفة ثابتة من البايتات؛ في أعلى ملف `lib.rs`، أضف:
 
 ```rust
 const FONTSET_SIZE: usize = 80;
@@ -61,7 +61,7 @@ const FONTSET: [u8; FONTSET_SIZE] = [
 ];
 ```
 
-You can see the bytes outlined in the "1" diagram above, all of the other letters work in a similar way. Now that these are outlined, we need to load them into RAM. Modify `Emu::new()` to copy those values in:
+يمكنك رؤية البايتات الموضحة في الرسم البياني للحرف "1" أعلاه، وجميع الأحرف الأخرى تعمل بطريقة مماثلة. الآن بعد أن تم تحديد هذه البايتات، نحتاج إلى تحميلها في الذاكرة العشوائية. قم بتعديل `Emu::new()` لنسخ هذه القيم:
 
 ```rust
 pub fn new() -> Self {
@@ -84,9 +84,9 @@ pub fn new() -> Self {
 }
 ```
 
-This initializes our `Emu` object in the same way as before, but copies in our character sprite data into RAM before returning it.
+يقوم هذا بتهيئة كائن `Emu` بنفس الطريقة كما كان من قبل، ولكن ينسخ بيانات رموز الأحرف إلى الذاكرة العشوائية قبل إرجاعه.
 
-It will also be useful to be able to reset our emulator without having to create a new object. There are fancier ways of doing this, but we'll just keep it simple and create a function that resets our member variables back to their original values when called.
+سيكون من المفيد أيضًا أن نتمكن من إعادة تعيين المحاكي دون الحاجة إلى إنشاء كائن جديد. هناك طرق أكثر تطورًا للقيام بذلك، ولكننا سنبقيها بسيطة وننشئ وظيفة تعيد تعيين متغيرات العضو إلى قيمها الأصلية عند استدعائها.
 
 ```rust
 pub fn reset(&mut self) {
@@ -106,23 +106,23 @@ pub fn reset(&mut self) {
 
 ## Tick
 
-With the creation of our `Emu` object completed (for now), we can begin to define how the CPU will process each instruction and move through the game. To summarize what was described in the previous parts, the basic loop will be:
+مع اكتمال إنشاء كائن `Emu` (في الوقت الحالي)، يمكننا البدء في تحديد كيفية معالجة وحدة المعالجة المركزية لكل تعليمة والتحرك خلال اللعبة. لتلخيص ما تم وصفه في الأجزاء السابقة، ستكون الحلقة الأساسية كما يلي:
 
-1. Fetch the value from our game (loaded into RAM) at the memory address stored in our Program Counter.
-2. Decode this instruction.
-3. Execute, which will possibly involve modifying our CPU registers or RAM.
-4. Move the PC to the next instruction and repeat.
+1. جلب القيمة من لعبتنا (التي تم تحميلها في الذاكرة العشوائية) من عنوان الذاكرة المخزن في عداد البرنامج (Program Counter).
+2. فك تشفير هذه التعليمات.
+3. التنفيذ، والذي قد يتضمن تعديل سجلات وحدة المعالجة المركزية أو الذاكرة العشوائية.
+4. تحريك عداد البرنامج إلى التعليمات التالية وتكرار العملية.
 
-Let's begin by adding the opcode processing to our `tick` function, beginning with the fetching step:
+لنبدأ بإضافة معالجة الأوامر إلى وظيفة `tick`، بدءًا من خطوة الجلب:
 
 ```rust
-// -- Unchanged code omitted --
+// -- كود غير متغير محذوف --
 
 pub fn tick(&mut self) {
-    // Fetch
+    // الجلب
     let op = self.fetch();
-    // Decode
-    // Execute
+    // فك التشفير
+    // التنفيذ
 }
 
 fn fetch(&mut self) -> u16 {
@@ -131,11 +131,11 @@ fn fetch(&mut self) -> u16 {
 
 ```
 
-The `fetch` function will only be called internally as part of our `tick` loop, so it doesn't need to be public. The purpose of this function is to grab the instruction we are about to execute (known as an *opcode*) for use in the next steps of this cycle. If you're unfamiliar with Chip-8's instruction format, I recommend you refresh up with the [overview](#eb) from the earlier chapters.
+سيتم استدعاء وظيفة `fetch` داخليًا فقط كجزء من حلقة `tick`، لذا لا تحتاج إلى أن تكون عامة. الغرض من هذه الوظيفة هو الحصول على التعليمات التي نحن على وشك تنفيذها (المعروفة باسم *opcode*) لاستخدامها في الخطوات التالية من هذه الدورة. إذا لم تكن على دراية بتنسيق تعليمات Chip-8، أوصي بمراجعة [الملخص](#eb) من الفصول السابقة.
 
-Fortunately, Chip-8 is easier than many systems. For one, there's only 35 opcodes to deal with as opposed to the hundreds that many processors support. In addition, many systems store additional parameters for each opcode in subsequent bytes (such as operands for addition), Chip-8 encodes these into the opcode itself. Due to this, all Chip-8 opcodes are exactly 2 bytes, which is larger than some other systems, but the entire instruction is stored in those two bytes, while other contemporary systems might consume between 1 and 3 bytes per cycle.
+لحسن الحظ، فإن Chip-8 أسهل من العديد من الأنظمة. أولاً، هناك فقط 35 opcode للتعامل معها مقارنة بالمئات التي تدعمها العديد من المعالجات. بالإضافة إلى ذلك، تقوم العديد من الأنظمة بتخزين معلمات إضافية لكل opcode في البايتات اللاحقة (مثل المعاملات للإضافة)، بينما يقوم Chip-8 بترميز هذه المعلمات في الـ opcode نفسه. بسبب هذا، فإن جميع opcodes في Chip-8 هي بالضبط 2 بايت، وهو أكبر من بعض الأنظمة الأخرى، ولكن التعليمات بأكملها مخزنة في هذين البايتين، بينما قد تستهلك الأنظمة الأخرى المعاصرة ما بين 1 إلى 3 بايتات لكل دورة.
 
-Each opcode is encoded differently, but fortunately since all instructions consume two bytes, the fetch operation is the same for all of them, and implemented as such:
+يتم ترميز كل opcode بشكل مختلف، ولكن لحسن الحظ نظرًا لأن جميع التعليمات تستهلك بايتين، فإن عملية الجلب هي نفسها لجميعها، ويتم تنفيذها على النحو التالي:
 
 ```rust
 fn fetch(&mut self) -> u16 {
@@ -147,11 +147,11 @@ fn fetch(&mut self) -> u16 {
 }
 ```
 
-This function fetches the 16-bit opcode stored at our current Program Counter. We store values in RAM as 8-bit values, so we fetch two and combine them as Big Endian. The PC is then incremented by the two bytes we just read, and our fetched opcode is returned for further processing.
+تقوم هذه الوظيفة بجلب الـ opcode الذي يبلغ 16 بت المخزن في عداد البرنامج الحالي. نقوم بتخزين القيم في الذاكرة العشوائية كقيم 8 بت، لذا نقوم بجلب اثنين ودمجهما كـ Big Endian. ثم يتم زيادة عداد البرنامج بمقدار البايتين اللذين قرأناهما للتو، ويتم إرجاع الـ opcode الذي تم جلبه لمزيد من المعالجة.
 
 ## Timer Tick
 
-The Chip-8 specification also mentions two special purpose *timers*, the Delay Timer and the Sound Timer. While the `tick` function operates once every CPU cycle, these timers are modified instead once every frame, and thus need to be handled in a separate function. Their behavior is rather simple, every frame both decrease by one. If the Sound Timer is set to one, the system will emit a 'beep' noise. If the timers ever hit zero, they do not automatically reset; they will remain at zero until the game manually resets them to some value.
+تذكر مواصفات Chip-8 أيضًا وجود مؤقتين خاصين، مؤقت التأخير (Delay Timer) ومؤقت الصوت (Sound Timer). بينما تعمل وظيفة `tick` مرة واحدة في كل دورة لوحدة المعالجة المركزية، يتم تعديل هذه المؤقتات بدلاً من ذلك مرة واحدة في كل إطار، وبالتالي يجب التعامل معها في وظيفة منفصلة. سلوكها بسيط للغاية، ففي كل إطار ينخفض كل منهما بمقدار واحد. إذا تم تعيين مؤقت الصوت إلى واحد، فإن النظام سيصدر صوت "بيب". إذا وصلت المؤقتات إلى الصفر، فإنها لا تعيد تعيين نفسها تلقائيًا؛ بل تبقى عند الصفر حتى تقوم اللعبة بإعادة تعيينها يدويًا إلى بعض القيم.
 
 ```rust
 pub fn tick_timers(&mut self) {
@@ -168,6 +168,6 @@ pub fn tick_timers(&mut self) {
 }
 ```
 
-Audio is the one thing that this guide won't cover, mostly due to increased complexity in getting audio to work in both our desktop and web browser frontends. For now we'll simply leave a comment where the beep would occur, but any curious readers are encouraged to implement it themselves (and then tell me how they did it).
+الصوت هو الشيء الوحيد الذي لن يغطيه هذا الدليل، وذلك بسبب التعقيد المتزايد في جعل الصوت يعمل في كل من واجهاتنا الأمامية لسطح المكتب ومتصفح الويب. في الوقت الحالي سنترك ببساطة تعليقًا حيث سيحدث الصوت، ولكن أي قراء فضوليين مدعوون لتنفيذ ذلك بأنفسهم (ثم إخباري كيف فعلوا ذلك).
 
 \newpage
