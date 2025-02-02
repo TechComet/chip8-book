@@ -1,13 +1,13 @@
-# Changelog
+# سجل التغييرات
 
-## Version 1.0
-- Initial release
-- Includes source code for Chip-8 emulator as well as PDF document discussing its development
+## الإصدار 1.0
+- الإصدار الأولي
+- يتضمن الكود المصدري لمحاكي Chip-8 بالإضافة إلى مستند PDF يناقش تطويره
 
-## Version 1.01
-- [Fix typo: Stack is a LIFO system, not a FIFO](https://github.com/aquova/chip8-book/issues/6)
-- [Added missing bug fixes from source code into the book](https://github.com/aquova/chip8-book/pull/5)
-- [Added ePub generation](https://github.com/aquova/chip8-book/pull/4)
+## الإصدار 1.01
+- [إصلاح خطأ مطبعي: المكدس هو نظام LIFO، وليس FIFO](https://github.com/aquova/chip8-book/issues/6)
+- [إضافة إصلاحات أخطاء مفقودة من الكود المصدري إلى الكتاب](https://github.com/aquova/chip8-book/pull/5)
+- [إضافة توليد ePub](https://github.com/aquova/chip8-book/pull/4)
 
-## Version 1.1
-- Updated much of the prose for better flow (special thanks to KDR for editing).
+## الإصدار 1.1
+- تم تحديث الكثير من النص لتحسين التدفق (شكر خاص لـ KDR للتحرير).
