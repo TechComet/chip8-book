@@ -1,63 +1,61 @@
-\newpage
+# مقدمة إلى محاكاة ألعاب الفيديو باستخدام Rust
 
-# An Introduction to Video Game Emulation with Rust
+تطوير محاكي لألعاب الفيديو أصبح مشروعًا هواية شائعًا بشكل متزايد بين المطورين. يتطلب هذا المشروع معرفة بالأجهزة منخفضة المستوى، ولغات البرمجة الحديثة، وأنظمة الرسومات لإنشائه بنجاح. يعتبر هذا المشروع تعليميًا ممتازًا؛ ليس فقط لأنه يحتوي على أهداف واضحة، ولكنه أيضًا مجزٍ للغاية عندما تتمكن من تشغيل الألعاب على محاكي قمت بكتابته بنفسك. أنا ما زلت مطور محاكاة جديد نسبيًا، لكنني لم أكن لأصل إلى ما أنا عليه الآن لولا الأدلة والبرامج التعليمية الرائعة المتاحة على الإنترنت. لذلك، أردت أن أرد الجميل للمجتمع من خلال كتابة دليل يحتوي على بعض الحيل التي تعلمتها، على أمل أن يكون مفيدًا لشخص آخر.
 
-Developing a video game emulator is becoming an increasingly popular hobby project for developers. It requires knowledge of low-level hardware, modern programming languages, and graphics systems to successfully create one. It is an excellent learning project; not only does it have clear goals, but it also very rewarding to successfully play games on an emulator you've written yourself. I am still a relatively new emulation developer, but I wouldn't have been able to reach the place I am now if it weren't for excellent guides and tutorials online. To that end, I wanted to give back to the community by writing a guide with some of the tricks I picked up, in hopes it is useful for someone else.
+## مقدمة عن Chip-8
 
-## Intro to Chip-8
+نظامنا المستهدف هو [Chip-8](https://en.wikipedia.org/wiki/CHIP-8). أصبح Chip-8 بمثابة "Hello World" لتطوير المحاكاة. بينما قد تكون مغريًا للبدء بشيء أكثر إثارة مثل NES أو Game Boy، إلا أن هذه الأنظمة أكثر تعقيدًا من Chip-8. يحتوي Chip-8 على شاشة أحادية اللون بدقة 1 بت، وصوت بسيط أحادي القناة، و35 تعليمة فقط (مقارنة بحوالي 500 تعليمة في Game Boy)، ولكن سنتحدث عن ذلك لاحقًا. سيغطي هذا الدليل التفاصيل التقنية لـ Chip-8، وما هي أنظمة الأجهزة التي تحتاج إلى محاكاتها وكيفية ذلك، وكيفية التفاعل مع المستخدم. سيركز هذا الدليل على مواصفات Chip-8 الأصلية، ولن يتم تنفيذ أي من الامتدادات العديدة التي تم اقتراحها، مثل Super Chip-8 أو Chip-16 أو XO-Chip؛ حيث تم إنشاؤها بشكل مستقل عن بعضها البعض، وبالتالي تضيف ميزات متناقضة.
 
-Our target system is the [Chip-8](https://en.wikipedia.org/wiki/CHIP-8). The Chip-8 has become the "Hello World" for emulation development of a sort. While you might be tempted to begin with something more exciting like the NES or Game Boy, these are a level of complexity higher than the Chip-8. The Chip-8 has a 1-bit monochrome display, a simple 1-channel single tone audio, and only 35 instructions (compared to ~500 for the Game Boy), but more on that later. This guide will cover the technical specifics of the Chip-8, what hardware systems need to be emulated and how, and how to interact with the user. This guide will focus on the original Chip-8 specification, and will not implement any of the many proposed extensions that have been created, such as the Super Chip-8, Chip-16, or XO-Chip; these were created independently of each other, and thus add contradictory features.
+## المواصفات التقنية لـ Chip-8
 
-## Chip-8 Technical Specifications
+- شاشة أحادية اللون بدقة 64x32، يتم الرسم عليها عبر أشكال (sprites) بعرض 8 بكسل وارتفاع يتراوح بين 1 و16 بكسل.
 
-- A 64x32 monochrome display, drawn to via sprites that are always 8 pixels wide and between 1 and 16 pixels tall
+- ستة عشر سجلًا عامًا بعرض 8 بت، يُشار إليها بـ V0 حتى VF. يعمل VF أيضًا كسجل علم (flag register) لعمليات الفائض (overflow).
 
-- Sixteen 8-bit general purpose registers, referred to as V0 thru VF. VF also doubles as the flag register for overflow operations
+- عداد برنامج (program counter) بعرض 16 بت.
 
-- 16-bit program counter
+- سجل واحد بعرض 16 بت يُستخدم كمؤشر للوصول إلى الذاكرة، يُسمى *سجل I*.
 
-- Single 16-bit register used as a pointer for memory access, called the *I Register*
+- كمية غير موحدة من الذاكرة العشوائية (RAM)، ولكن معظم المحاكيات تخصص 4 كيلوبايت.
 
-- An unstandardised amount of RAM, however most emulators allocate 4 KB
+- مكدس (stack) بعرض 16 بت يُستخدم لاستدعاء العودة من الإجراءات الفرعية (subroutines).
 
-- 16-bit stack used for calling and returning from subroutines
+- إدخال لوحة مفاتيح مكونة من 16 مفتاحًا.
 
-- 16-key keyboard input
+- سجلين خاصين ينخفضان كل إطار ويتم تشغيلهما عند الوصول إلى الصفر:
+    - مؤخر الوقت (Delay timer): يُستخدم للأحداث الزمنية في اللعبة.
+    - مؤخر الصوت (Sound timer): يُستخدم لتشغيل صوت التنبيه.
 
-- Two special registers which decrease each frame and trigger upon reaching zero:
-    - Delay timer: Used for time-based game events
-    - Sound timer: Used to trigger the audio beep
+## مقدمة عن Rust
 
-## Intro to Rust
+يمكن كتابة المحاكيات بلغات برمجة عديدة. يستخدم هذا الدليل لغة البرمجة [Rust](https://www.rust-lang.org/)، على الرغم من أن الخطوات الموضحة هنا يمكن تطبيقها بأي لغة. تقدم Rust العديد من المزايا الرائعة؛ فهي لغة مكتوبة (compiled) تدعم منصات رئيسية ولديها مجتمع نشط من المكتبات الخارجية التي يمكن استخدامها في مشروعنا. تدعم Rust أيضًا التجميع لـ [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly)، مما يسمح لنا بإعادة تجميع الكود للعمل في المتصفح مع تعديلات بسيطة. يفترض هذا الدليل أنك تفهم أساسيات لغة Rust والبرمجة بشكل عام. سأشرح الكود أثناء تقدمنا، ولكن نظرًا لأن Rust تتمتع بمنحنى تعليمي مرتفع، أوصي بقراءة والرجوع إلى [الكتاب الرسمي لـ Rust](https://doc.rust-lang.org/stable/book/title-page.html) لأي مفاهيم غير مألوفة أثناء تقدم الدليل. يفترض هذا الدليل أيضًا أنك قمت بتثبيت Rust وأنها تعمل بشكل صحيح. يرجى الرجوع إلى [تعليمات التثبيت](https://www.rust-lang.org/tools/install) لمنصتك إذا لزم الأمر.
 
-Emulators can be written in nearly any programming language. This guide uses the [Rust programming language](https://www.rust-lang.org/), although the steps outlined here could be applied to any language. Rust offers a number of great advantages; it is a compiled language with targets for major platforms and it has an active community of external libraries to utilize for our project. Rust also supports building for [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly), allowing us to recompile our code to work in a browser with a minimal amount of tweaking. This guide assumes you understand the basics of the Rust language and programming as a whole. I will explain the code as we go along, but as Rust has a notoriously high learning curve, I would recommend reading and referencing the excellent [official Rust book](https://doc.rust-lang.org/stable/book/title-page.html) on any concepts that are unfamiliar to you as the guide progresses. This guide also assumes that you have Rust installed and working correctly. Please consult the [installation instructions](https://www.rust-lang.org/tools/install) for your platform if needed.
+## ما ستحتاج إليه
 
-## What you will need
+قبل أن تبدأ، يرجى التأكد من أن لديك أو قمت بتثبيت العناصر التالية.
 
-Before you begin, please ensure you have access to or have installed the following items.
+### محرر نصوص
 
-### Text Editor
+يمكن استخدام أي محرر نصوص للمشروع، ولكن هناك محرران أوصي بهما حيث يقدمان ميزات لـ Rust مثل تمييز الصيغة (syntax highlighting)، اقتراحات الكود، ودعم المصحح (debugger).
 
-Any text editor can be used for the project, but there are two I recommend which offer features for Rust like syntax highlighting, code suggestions, and debugger support.
+- [Visual Studio Code](https://code.visualstudio.com/) هو المحرر الذي أفضله لـ Rust، بالاشتراك مع إضافة [rust-analyzer](https://rust-analyzer.github.io/).
 
-- [Visual Studio Code](https://code.visualstudio.com/) is the editor I prefer for Rust, in combination with the [rust-analyzer](https://rust-analyzer.github.io/) extension.
+- بينما لا تقدم JetBrains بيئة تطوير متكاملة (IDE) مخصصة لـ Rust، إلا أن هناك إضافة لـ Rust للعديد من منتجاتها الأخرى. توفر [الإضافة](https://intellij-rust.github.io/) لـ [CLion](https://www.jetbrains.com/clion/) ميزات إضافية مثل دعم المصحح المدمج. ضع في اعتبارك أن CLion منتج مدفوع، على الرغم من أنه يقدم نسخة تجريبية لمدة 30 يومًا وفترات مجانية ممتدة للطلاب.
 
-- While JetBrains does not offer a dedicated Rust IDE, there is a Rust extension for many of its other products. The [extension](https://intellij-rust.github.io/) for [CLion](https://www.jetbrains.com/clion/) has additional functionality that the others do not, such as integrated debugger support. Keep in mind that CLion is a paid product, although it offers a 30 day trial as well as extended free periods for students.
+إذا كنت لا تفضل أيًا من هذه الخيارات، تتوفر إضافات للصيغة والاكتمال التلقائي لـ Rust للعديد من المحررات الأخرى، ويمكن تصحيح الأخطاء بسهولة باستخدام العديد من المصححات الأخرى مثل gdb.
 
-If you do not care for any of these, Rust syntax and autocompletion plugins exist for many other editors, and it can be debugged fairly easily with many other debuggers, such as gdb.
+### ROMs للاختبار
 
-### Test ROMs
+المحاكي ليس مفيدًا إذا لم يكن لديك شيء لتشغيله! تم تضمين العديد من برامج Chip-8 الشائعة مع الكود المصدري لهذا الكتاب، ويمكن أيضًا العثور عليها [هنا](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html). سيتم عرض بعض هذه الألعاب كأمثلة خلال هذا الدليل.
 
-An emulator isn't much use if you have nothing to run! Included with the source code for this book are a number of commonly distributed Chip-8 programs, which can also be found [here](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html). Some of these games will be shown as an example throughout this guide.
+### أشياء أخرى
 
-### Misc.
+عناصر أخرى قد تكون مفيدة أثناء تقدمنا:
 
-Other items that may be helpful as we progress:
+- يرجى تحديث معرفتك بـ [النظام الست عشري (hexadecimal)](https://en.wikipedia.org/wiki/Hexadecimal) إذا كنت لا تشعر بالراحة مع هذا المفهوم. سيتم استخدامه بشكل مكثف خلال هذا المشروع.
 
-- Please refresh yourself with [hexadecimal](https://en.wikipedia.org/wiki/Hexadecimal) notation if you do not feel comfortable with the concept. It will be used extensively throughout this project.
+- ألعاب Chip-8 تكون بتنسيق ثنائي (binary)، وغالبًا ما يكون من المفيد أن تكون قادرًا على عرض القيم الست عشرية الخام أثناء تصحيح الأخطاء. عادةً لا تدعم محررات النصوص القياسية عرض الملفات بالنظام الست عشري، بل يتطلب ذلك محرر ست عشري متخصص [hex editor](https://en.wikipedia.org/wiki/Comparison_of_hex_editors). العديد منها يقدم ميزات مشابهة، لكني أفضل شخصيًا [Reverse Engineer's Hex Editor](https://github.com/solemnwarning/rehex).
 
-- Chip-8 games are in a binary format, it is often helpful to be able to view the raw hex values as you debug. Standard text editors typically don't have support for viewing files in hexadecimal, instead a specialized [hex editor](https://en.wikipedia.org/wiki/Comparison_of_hex_editors) is required. Many offer similar features, but I personally prefer [Reverse Engineer's Hex Editor](https://github.com/solemnwarning/rehex).
-
-Let's begin!
+لنبدأ!
 
 \newpage
