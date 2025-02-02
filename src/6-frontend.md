@@ -1,48 +1,48 @@
-# Writing our Desktop Frontend {#dfe}
+# كتابة الواجهة الأمامية لسطح المكتب {#dfe}
 
-In this section, we will finally connect all the pieces and get our emulator to load and run a game. At this stage, our emulator core is capable of parsing and processing the game's opcodes, and being able to update the screen, RAM, and the registers as needed. Next, we will need to add some public functions to expose some functionality to the frontend, such as loading in a game, accepting user input, and sharing the screen buffer to be displayed.
+في هذا القسم، سنقوم أخيرًا بتوصيل جميع القطع وجعل المحاكي الخاص بنا يقوم بتحميل وتشغيل لعبة. في هذه المرحلة، أصبحت نواة المحاكي قادرة على تحليل ومعالجة أوامر اللعبة، وتحديث الشاشة والذاكرة والسجلات حسب الحاجة. بعد ذلك، سنحتاج إلى إضافة بعض الوظائف العامة لتوفير بعض الوظائف للواجهة الأمامية، مثل تحميل لعبة، قبول إدخال المستخدم، ومشاركة مخزن الشاشة ليتم عرضه.
 
-## Exposing the Core to the Frontend
+## تعريض النواة للواجهة الأمامية
 
-We are not done with our `chip8_core` just yet. We need to add a few public functions to our `Emu` struct to give access to some of its items.
+لم ننتهي بعد من `chip8_core`. نحتاج إلى إضافة بعض الوظائف العامة إلى بنية `Emu` لإعطاء الوصول إلى بعض العناصر.
 
-In `chip8_core/src/lib.rs`, add the following method to our `Emu` struct:
+في `chip8_core/src/lib.rs`، أضف الطريقة التالية إلى بنية `Emu`:
 
 ```rust
 impl Emu {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     pub fn get_display(&self) -> &[bool] {
         &self.screen
     }
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-This simply passes a pointer to our screen buffer array up to the frontend, where it can be used to render to the display.
+هذا ببساطة يمرر مؤشرًا إلى مصفوفة مخزن الشاشة إلى الواجهة الأمامية، حيث يمكن استخدامها لعرض الشاشة.
 
-Next, we will need to handle key presses. We already have a `keys` array, but it never actually gets written to. Our frontend will handle actually reading keyboard presses, but we'll need to expose a function that allows it to interface and set elements in our `keys` array.
+بعد ذلك، سنحتاج إلى التعامل مع ضغطات المفاتيح. لدينا بالفعل مصفوفة `keys`، ولكنها لم تتم كتابتها أبدًا. ستقوم الواجهة الأمامية بالتعامل مع قراءة ضغطات المفاتيح، ولكننا سنحتاج إلى تعريض وظيفة تسمح لها بالتفاعل وتعيين العناصر في مصفوفة `keys`.
 
 ```rust
 impl Emu {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     pub fn keypress(&mut self, idx: usize, pressed: bool) {
         self.keys[idx] = pressed;
     }
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-This function is rather straightforward. It takes the index of the key that has been pressed and sets the value. We could have split this function into a `press_key` and `release_key` function, but this is simple enough that I think the intention still comes across. Keep in mind that `idx` needs to be under 16 or else the program will panic. You can add that restriction here, but instead we'll handle it in the frontend and assume that it's been done correctly in the backend, rather than checking it twice.
+هذه الوظيفة بسيطة جدًا. تأخذ الفهرس الخاص بالمفتاح الذي تم الضغط عليه وتعيين القيمة. كان بإمكاننا تقسيم هذه الوظيفة إلى `press_key` و `release_key`، ولكن هذا بسيط بما يكفي بحيث يظل الهدف واضحًا. تذكر أن `idx` يجب أن يكون أقل من 16 وإلا ستفشل البرنامج. يمكنك إضافة هذا القيد هنا، ولكن بدلاً من ذلك سنتعامل معه في الواجهة الأمامية ونفترض أنه تم التحقق منه بشكل صحيح في الخلفية، بدلاً من التحقق منه مرتين.
 
-Lastly, we need some way to load the game code from a file into our RAM so it can be executed. We'll dive into this more deeply when we begin reading from a file in our frontend, but for now we need to take in a list of bytes and copy them into our RAM.
+أخيرًا، نحتاج إلى طريقة لتحميل كود اللعبة من ملف إلى ذاكرتنا حتى يمكن تنفيذه. سنتعمق في هذا أكثر عندما نبدأ في القراءة من ملف في الواجهة الأمامية، ولكن في الوقت الحالي نحتاج إلى أخذ قائمة من البايتات ونسخها إلى ذاكرتنا.
 
 ```rust
 impl Emu {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     pub fn load(&mut self, data: &[u8]) {
         let start = START_ADDR as usize;
@@ -50,17 +50,17 @@ impl Emu {
         self.ram[start..end].copy_from_slice(data);
     }
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-This function copies all the values from our input `data` slice into RAM beginning at 0x200. Remember that the first 512 bytes of RAM aren't to contain game data, and are empty except for the character sprite data we store there.
+تقوم هذه الوظيفة بنسخ جميع القيم من شريحة الإدخال `data` إلى الذاكرة بدءًا من 0x200. تذكر أن أول 512 بايت من الذاكرة لا تحتوي على بيانات اللعبة، وهي فارغة باستثناء بيانات الـ sprites التي نقوم بتخزينها هناك.
 
-## Frontend Setup
+## إعداد الواجهة الأمامية
 
-Finally, let's setup the frontend of the emulator so we can test things out and (hopefully) play some games! Making a fancy GUI interface is beyond the scope of this guide, we will simply start the emulator and choose which game to play via a command line argument. Let's set that up now.
+أخيرًا، لنقم بإعداد الواجهة الأمامية للمحاكي حتى نتمكن من اختبار الأشياء ونأمل أن نلعب بعض الألعاب! إنشاء واجهة مستخدم رسومية متقدمة هو خارج نطاق هذا الدليل، سنقوم ببساطة ببدء المحاكي واختيار اللعبة التي نريد لعبها عبر وسيطة سطر الأوامر. لنقم بإعداد ذلك الآن.
 
-In `desktop/src/main.rs` we will need to read the command line arguments to receive the path to our game ROM file. We could create several flags for additional configuration, but we'll keep it simple and say that we'll require exactly one argument - the path to the game. Any other number and we'll exit out with an error.
+في `desktop/src/main.rs`، سنحتاج إلى قراءة وسيطات سطر الأوامر لتلقي مسار ملف لعبة ROM الخاص بنا. كان بإمكاننا إنشاء عدة أعلام لإعدادات إضافية، ولكننا سنبقيها بسيطة ونقول أننا سنطلب وسيطة واحدة بالضبط - مسار اللعبة. أي عدد آخر وسنخرج بخطأ.
 
 ```rust
 use std::env;
@@ -74,13 +74,13 @@ fn main() {
 }
 ```
 
-This grabs all of the passed command line parameters into a vector, and if there isn't two (the name of the program is always stored in `args[0]`), then we print out the correct input and exit. The path passed in by the user is now stored in `args[1]`. We'll have to make sure that's a valid file once we attempt to open it, but first, we have some other stuff to setup.
+هذا يأخذ جميع معلمات سطر الأوامر الممررة إلى متجه، وإذا لم يكن هناك اثنان (اسم البرنامج دائمًا مخزن في `args[0]`)، فإننا نطبع الإدخال الصحيح ونخرج. المسار الذي أدخله المستخدم موجود الآن في `args[1]`. سنحتاج إلى التأكد من أن هذا الملف صالح بمجرد محاولة فتحه، ولكن أولاً، لدينا بعض الأشياء الأخرى لإعدادها.
 
-## Creating a Window
+## إنشاء نافذة
 
-For this emulation project, we are going to use the SDL library to create our game window and render to it. SDL is an excellent drawing library to use with good support for key presses and drawing. There's a small amount of boilerplate we'll need in order to set it up, but once that's done we can begin our emulation.
+لمشروع المحاكاة هذا، سنستخدم مكتبة SDL لإنشاء نافذة اللعبة والرسم عليها. SDL هي مكتبة رسم ممتازة مع دعم جيد لضغطات المفاتيح والرسم. هناك كمية صغيرة من الكود التمهيدي التي سنحتاجها لإعدادها، ولكن بمجرد الانتهاء من ذلك يمكننا بدء المحاكاة.
 
-First, we'll need to include it into our project. Open `desktop/Cargo.toml` and add `sdl2` to our dependencies:
+أولاً، سنحتاج إلى تضمينها في مشروعنا. افتح `desktop/Cargo.toml` وأضف `sdl2` إلى التبعيات:
 
 ```toml
 [dependencies]
@@ -88,7 +88,7 @@ chip8_core = { path = "../chip8_core" }
 sdl2 = "^0.34.3
 ```
 
-Now back in `desktop/src/main.rs`, we can begin bringing it all together. We'll need the public functions we defined in our core, so let's tell Rust we'll need those with `use chip8_core::*`.
+الآن في `desktop/src/main.rs`، يمكننا البدء في تجميع كل شيء معًا. سنحتاج إلى الوظائف العامة التي حددناها في نواتنا، لذا دعنا نخبر Rust أننا بحاجة إليها باستخدام `use chip8_core::*`.
 
 ```rust
 use chip8_core::*;
@@ -103,7 +103,7 @@ fn main() {
 }
 ```
 
-Inside `chip8_core`, we created public constants to hold the screen size, which we are now importing. However, a 64x32 game window is really small on today's monitors, so let's go ahead and scale it up a bit. After experimenting with some numbers, a 15x scale works well on my monitor, but you can tweak this if you prefer something else.
+داخل `chip8_core`، قمنا بإنشاء ثوابت عامة لتخزين حجم الشاشة، والتي نقوم الآن باستيرادها. ومع ذلك، نافذة لعبة بحجم 64x32 صغيرة جدًا على شاشات اليوم، لذا دعنا نضاعف حجمها قليلاً. بعد تجربة بعض الأرقام، وجدت أن مقياس 15x يعمل بشكل جيد على شاشتي، ولكن يمكنك تعديل هذا إذا كنت تفضل شيئًا آخر.
 
 ```rust
 const SCALE: u32 = 15;
@@ -111,15 +111,15 @@ const WINDOW_WIDTH: u32 = (SCREEN_WIDTH as u32) * SCALE;
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT as u32) * SCALE;
 ```
 
-Recall that `SCREEN_WIDTH` and `SCREEN_HEIGHT` were public constants we defined in our backend and are now included into this crate via the `use chip8_core::*` statement. SDL will require screen sizes to be `u32` rather than `usize` so we'll cast them here.
+تذكر أن `SCREEN_WIDTH` و `SCREEN_HEIGHT` كانتا ثوابت عامة حددناهما في الخلفية ويتم تضمينهما الآن في هذه الحزمة عبر عبارة `use chip8_core::*`. SDL يتطلب أن تكون أحجام الشاشة من النوع `u32` بدلاً من `usize` لذا سنقوم بتحويلها هنا.
 
-It's time to create our SDL window! The following code simply creates a new SDL context, then makes the window itself and the canvas that we'll draw upon.
+حان الوقت لإنشاء نافذة SDL الخاصة بنا! الكود التالي ببساطة ينشئ سياق SDL جديد، ثم يقوم بإنشاء النافذة نفسها واللوحة التي سنرسم عليها.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // Setup SDL
+    // إعداد SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -135,25 +135,25 @@ fn main() {
 }
 ```
 
-We'll initialize SDL and tell it to create a new window of our scaled up size. We'll also have it be created in the middle of the user's screen. We'll then get the canvas object we'll actually draw to, with VSYNC on. Then go ahead and clear it and show it to the user.
+سنقوم بتهيئة SDL ونطلب منها إنشاء نافذة جديدة بحجمنا المضاعف. سنقوم أيضًا بوضعها في منتصف شاشة المستخدم. بعد ذلك، سنحصل على كائن اللوحة الذي سنرسم عليه، مع تفعيل VSYNC. ثم نقوم بمسحها وعرضها للمستخدم.
 
-If you attempt to run it now (give it a dummy file name to test, like `cargo run test`), you'll see a window pop up for a brief moment before closing. This is because the SDL window is created briefly, but then the program ends and the window closes. We'll need to create our main game loop so that our program doesn't end immediately, and while we're at it, let's add some handling to quit the program if we try to exit out of the window (otherwise you'll have to force quit the program from your task manager).
+إذا حاولت تشغيلها الآن (أعطها اسم ملف وهمي للاختبار، مثل `cargo run test`)، ستظهر نافذة لفترة وجيزة قبل أن تغلق. هذا لأن نافذة SDL يتم إنشاؤها لفترة وجيزة، ولكن بعد ذلك ينتهي البرنامج وتغلق النافذة. سنحتاج إلى إنشاء حلقة اللعبة الرئيسية حتى لا ينتهي البرنامج فورًا، وبينما نحن في ذلك، دعنا نضيف بعض التعامل مع الخروج من النافذة إذا حاولنا إغلاقها (وإلا سيتعين عليك إجبار البرنامج على الإغلاق من مدير المهام).
 
-SDL uses something called an *event pump* to poll for events every loop. By checking this, we can cause different things to happen for given events, such as attempting to close the window or pressing a key. For now, we'll just have the program break out of the main game loop if it needs the window to close.
+يستخدم SDL شيئًا يسمى *مضخة الأحداث* للتحقق من الأحداث في كل حلقة. عن طريق التحقق من هذا، يمكننا جعل أشياء مختلفة تحدث لأحداث معينة، مثل محاولة إغلاق النافذة أو الضغط على مفتاح. في الوقت الحالي، سنقوم فقط بجعل البرنامج يخرج من حلقة اللعبة الرئيسية إذا احتاج إلى إغلاق النافذة.
 
-We'll need to tell Rust that we wish to use SDL's `Event`:
+سنحتاج إلى إخبار Rust أننا نرغب في استخدام `Event` من SDL:
 
 ```rust
 use sdl2::event::Event;
 ```
 
-And modify our `main` function to add our basic game loop:
+وتعديل دالة `main` لإضافة حلقة اللعبة الأساسية:
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // Setup SDL
+    // إعداد SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -182,38 +182,38 @@ fn main() {
 }
 ```
 
-This addition sets up our main game loop, which checks if any events have been triggered. If the `Quit` event is detected (by attempting to close the window), then the program breaks out of the loop, causing it to end. If you try to run it again via `cargo run test`, you'll see a new black window pop-up, with the title of 'Chip-8 Emulator'. The window should successfully close without issue.
+هذه الإضافة تقوم بإعداد حلقة اللعبة الرئيسية، والتي تتحقق مما إذا كانت أي أحداث قد تم تشغيلها. إذا تم اكتشاف حدث `Quit` (عن طريق محاولة إغلاق النافذة)، فإن البرنامج يخرج من الحلقة، مما يؤدي إلى إنهائه. إذا حاولت تشغيلها مرة أخرى عبر `cargo run test`، ستظهر نافذة سوداء جديدة بعنوان 'Chip-8 Emulator'. يجب أن تغلق النافذة بنجاح دون مشاكل.
 
-It lives! Next up, we'll initialize our emulator's `chip8_core` backend, and open and load the game file.
+إنها تعمل! بعد ذلك، سنقوم بتهيئة نواة المحاكي `chip8_core`، وفتح وتحميل ملف اللعبة.
 
-## Loading a File
+## تحميل ملف
 
-Our frontend can now create a new emulation window, so it's time to start getting the backend up and running as well. Our next step will be to actually read in a game file, and pass its data to the backend to be stored in RAM and executed upon. Firstly, we need to actually have a backend object to pass things to. Still in `frontend/src/main.rs`, let's create our emulation object. Our `Emu` object has already been included with all the other public items from `chip8_core`, so we're free to initialize.
+الواجهة الأمامية لدينا يمكنها الآن إنشاء نافذة محاكاة جديدة، لذا حان الوقت لبدء تشغيل الخلفية أيضًا. ستكون خطوتنا التالية هي قراءة ملف لعبة فعليًا، وتمرير بياناته إلى الخلفية ليتم تخزينها في الذاكرة وتنفيذها. أولاً، نحتاج إلى وجود كائن خلفي لتمرير الأشياء إليه. لا يزال في `frontend/src/main.rs`، لنقم بإنشاء كائن المحاكاة الخاص بنا. تم بالفعل تضمين كائن `Emu` مع جميع العناصر العامة من `chip8_core`، لذا يمكننا التهيئة بحرية.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     let mut chip8 = Emu::new();
 
     'gameloop: loop {
-        // -- Unchanged code omitted --
+        // -- كود غير متغير محذوف --
     }
 }
 ```
 
-Creating the `Emu` object needs to go somewhere prior to our main game loop, as that is where the emulation drawing and key press handing will go. Remember that the path to the game is being passed in by the user, so we'll also need to make sure this file actually exists before we attempt read it in. We'll need to first `use` a few items from the standard library in `main.rs` to open a file.
+إنشاء كائن `Emu` يجب أن يتم في مكان ما قبل حلقة اللعبة الرئيسية، حيث سيتم فيها رسم المحاكاة والتعامل مع ضغطات المفاتيح. تذكر أن مسار اللعبة يتم تمريره من قبل المستخدم، لذا سنحتاج أيضًا إلى التأكد من أن هذا الملف موجود بالفعل قبل محاولة قراءته. سنحتاج أولاً إلى `use` بعض العناصر من المكتبة القياسية في `main.rs` لفتح ملف.
 
 ```rust
 use std::fs::File;
 use std::io::Read;
 ```
 
-Pretty self-explanatory there. Next, we'll open the file given to us as a command line parameter, read it into a buffer, then pass that data into our emulator backend.
+هذا واضح جدًا. بعد ذلك، سنقوم بفتح الملف المعطى لنا كمعامل سطر أوامر، وقراءته في مخزن مؤقت، ثم تمرير تلك البيانات إلى خلفية المحاكي.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
     let mut chip8 = Emu::new();
 
     let mut rom = File::open(&args[1]).expect("Unable to open file");
@@ -221,23 +221,23 @@ fn main() {
 
     rom.read_to_end(&mut buffer).unwrap();
     chip8.load(&buffer);
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-A few things to note here. In the event that Rust is unable to open the file from the path the user gave us (likely because it doesn't exist), then the `expect` condition will fail and the program will exit with that message. Secondly, we could give the file path to the backend and load the data there, but reading a file is a more frontend-type behavior and it better fits here. More importantly, our eventual plan is to make this emulator work in a web browser with little to no changes to our backend. How a browser reads a file is very different to how your file system will do it, so we will allow the frontends to handle the reading, and pass in the data once we have it.
+هناك بعض الأشياء التي يجب ملاحظتها هنا. في حالة عدم تمكن Rust من فتح الملف من المسار الذي أعطانا إياه المستخدم (على الأرجح لأنه غير موجود)، فإن شرط `expect` سيفشل وسيخرج البرنامج مع هذه الرسالة. ثانيًا، كان بإمكاننا إعطاء مسار الملف إلى الخلفية وتحميل البيانات هناك، ولكن قراءة الملف هي سلوك أكثر ملاءمة للواجهة الأمامية وهو أفضل هنا. والأهم من ذلك، خطتنا النهائية هي جعل هذا المحاكي يعمل في متصفح الويب مع تغييرات قليلة أو معدومة في الخلفية. كيفية قراءة المتصفح لملف تختلف كثيرًا عن كيفية قراءة نظام الملفات الخاص بك، لذا سنسمح للواجهات الأمامية بالتعامل مع القراءة، وتمرير البيانات بمجرد حصولنا عليها.
 
-## Running the Emulator and Drawing to the Screen
+## تشغيل المحاكي والرسم على الشاشة
 
-The game has been loaded into RAM and our main loop is running. Now we need to tell our backend to begin processing its instructions, and to actually draw to the screen. If you recall, the emulator runs through a clock cycle each time its `tick` function is called, so let's add that to our loop.
+تم تحميل اللعبة في الذاكرة وحلقتنا الرئيسية تعمل. الآن نحتاج إلى إخبار الخلفية ببدء معالجة تعليماتها، والرسم فعليًا على الشاشة. إذا كنت تتذكر، فإن المحاكي يعمل من خلال دورة ساعة كلما تم استدعاء دالة `tick`، لذا دعنا نضيف ذلك إلى حلقتنا.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     'gameloop: loop {
         for event in event_pump.poll_iter() {
-            // -- Unchanged code omitted --
+            // -- كود غير متغير محذوف --
         }
 
         chip8.tick();
@@ -245,7 +245,7 @@ fn main() {
 }
 ```
 
-Now every time the loop cycles, the emulator will progress through another instruction. This may seem too easy, but we've set it up so `tick` moves all the pieces of the backend, including modifying our screen buffer. Let's add a function that will grab the screen data from the backend and update our SDL window. First, we need to `use` a few additional elements from SDL:
+الآن في كل مرة تدور فيها الحلقة، سيتقدم المحاكي من خلال تعليمة أخرى. قد يبدو هذا سهلاً للغاية، ولكننا قمنا بإعداده بحيث تقوم `tick` بتحريك جميع أجزاء الخلفية، بما في ذلك تعديل مخزن الشاشة. دعنا نضيف دالة ستجلب بيانات الشاشة من الخلفية وتحديث نافذة SDL الخاصة بنا. أولاً، نحتاج إلى `use` بعض العناصر الإضافية من SDL:
 
 ```rust
 use sdl2::pixels::Color;
@@ -254,24 +254,24 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 ```
 
-Next, the function, which will take in a reference to our `Emu` object, as well as a mutable reference to our SDL canvas. Drawing the screen requires a few steps. First, we clear the canvas to erase the previous frame. Then, we iterate through the screen buffer, drawing a white rectangle anytime the given value is true. Since Chip-8 only supports black and white; if we clear the screen as black, we only have to worry about drawing the white squares.
+بعد ذلك، الدالة، التي ستأخذ مرجعًا إلى كائن `Emu` الخاص بنا، بالإضافة إلى مرجع قابل للتعديل إلى لوحة SDL الخاصة بنا. يتطلب رسم الشاشة بضع خطوات. أولاً، نقوم بمسح اللوحة لمحو الإطار السابق. بعد ذلك، نكرر من خلال مخزن الشاشة، ونرسم مستطيلًا أبيض في أي وقت تكون القيمة المعطاة صحيحة. نظرًا لأن Chip-8 تدعم الأسود والأبيض فقط؛ إذا قمنا بمسح الشاشة باللون الأسود، فإننا نحتاج فقط إلى الاهتمام برسم المربعات البيضاء.
 
 ```rust
 fn draw_screen(emu: &Emu, canvas: &mut Canvas<Window>) {
-    // Clear canvas as black
+    // مسح اللوحة باللون الأسود
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
 
     let screen_buf = emu.get_display();
-    // Now set draw color to white, iterate through each point and see if it should be drawn
+    // الآن تعيين لون الرسم إلى الأبيض، والتكرار خلال كل نقطة لمعرفة ما إذا كان يجب رسمها
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     for (i, pixel) in screen_buf.iter().enumerate() {
         if *pixel {
-            // Convert our 1D array's index into a 2D (x,y) position
+            // تحويل الفهرس من المصفوفة أحادية البعد إلى موضع ثنائي الأبعاد (x, y)
             let x = (i % SCREEN_WIDTH) as u32;
             let y = (i / SCREEN_WIDTH) as u32;
 
-            // Draw a rectangle at (x,y), scaled up by our SCALE value
+            // رسم مستطيل في الموضع (x, y)، مع تكبيره حسب قيمة `SCALE`
             let rect = Rect::new((x * SCALE) as i32, (y * SCALE) as i32, SCALE, SCALE);
             canvas.fill_rect(rect).unwrap();
         }
@@ -280,17 +280,17 @@ fn draw_screen(emu: &Emu, canvas: &mut Canvas<Window>) {
 }
 ```
 
-To summarize this function, we get our 1D screen buffer array and iterate across it. If we find a white pixel (a true value), then we calculate the 2D (x, y) of the screen and draw a rectangle there, scaled up by our `SCALE` factor.
+لتلخيص هذه الوظيفة، نحصل على مصفوفة الشاشة أحادية البعد ونكرر خلالها. إذا وجدنا بكسلًا أبيض (قيمة `true`)، فإننا نحسب الموضع ثنائي الأبعاد (x, y) للشاشة ونرسم مستطيلًا هناك، مع تكبيره حسب عامل `SCALE`.
 
-We'll call this function in our main loop, just after we `tick`.
+سنستدعي هذه الوظيفة في الحلقة الرئيسية، مباشرة بعد استدعاء `tick`.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     'gameloop: loop {
         for event in event_pump.poll_iter() {
-            // -- Unchanged code omitted --
+            // -- الكود غير المتغير محذوف --
         }
 
         chip8.tick();
@@ -299,30 +299,30 @@ fn main() {
 }
 ```
 
-Some of you might be raising your eyebrows at this. The screen should be updated at 60 frames per second, or 60 Hz. Surely the emulation needs to happen faster than that? It does, but hold that thought for now. We'll start by making sure it works at all before we fix the timings.
+قد يتساءل بعضكم عن هذا. يجب تحديث الشاشة بمعدل 60 إطارًا في الثانية، أو 60 هرتز. بالتأكيد يجب أن تكون المحاكاة أسرع من ذلك؟ نعم، ولكن دعونا نضع هذا التفكير جانبًا الآن. سنبدأ بالتأكد من أن الأمر يعمل بشكل أساسي قبل أن نصلح التوقيتات.
 
-If you have a Chip-8 game downloaded, go ahead and try running your emulator with an actual game via:
+إذا كان لديك لعبة Chip-8، يمكنك تجربة تشغيل المحاكي الخاص بك مع لعبة فعلية عبر:
 
 ```
 $ cargo run path/to/game
 ```
 
-If everything has gone well, you should see the window appear and the game begin to render and play! You should feel accomplished for getting this far with your very own emulator.
+إذا سار كل شيء بشكل جيد، يجب أن تظهر النافذة وتبدأ اللعبة في التقديم واللعب! يجب أن تشعر بالإنجاز لوصولك إلى هذا الحد مع محاكيك الخاص.
 
-As I mentioned previously, the emulation `tick` speed should probably run faster than the canvas refresh rate. If you watch your game run, it might feel a bit sluggish. Right now, we execute one instruction, then draw to the screen, then repeat. As you're aware, it takes several instructions to be able to do any meaningful changes to the screen. To get around this, we will allow the emulator to tick several times before redrawing.
+كما ذكرت سابقًا، يجب أن تكون سرعة `tick` للمحاكاة أسرع من معدل تحديث اللوحة. إذا شاهدت لعبتك تعمل، قد تشعر بأنها بطيئة بعض الشيء. حاليًا، ننفذ تعليمة واحدة، ثم نرسم على الشاشة، ثم نكرر. كما تعلمون، يتطلب الأمر عدة تعليمات لإجراء أي تغييرات ذات معنى على الشاشة. للتغلب على هذا، سنسمح للمحاكي بالتنفيذ عدة مرات قبل إعادة الرسم.
 
-Now, this is where things get a bit experimental. The Chip-8 specification says nothing about how quickly the system should actually run. Even leaving it is now so it runs at 60 Hz is a valid solution (and you're welcome to do so). We'll simply allow our `tick` function to loop several times before moving on to drawing the screen. Personally, I (and other emulators I've looked at) find that 10 ticks per frame is a nice sweet spot.
+الآن، هذا هو المكان الذي تصبح فيه الأمور تجريبية بعض الشيء. مواصفات Chip-8 لا تقول أي شيء عن مدى سرعة النظام. حتى تركها كما هي الآن لتشغيلها بسرعة 60 هرتز هو حل صالح (وأنت مرحب بفعل ذلك). سنسمح ببساطة لوظيفة `tick` بالتكرار عدة مرات قبل الانتقال إلى رسم الشاشة. شخصيًا، أجد (وغيري من المحاكيات التي نظرت إليها) أن 10 تكرارات لكل إطار هو نقطة مثالية.
 
 ```rust
 const TICKS_PER_FRAME: usize = 10;
-// -- Unchanged code omitted --
+// -- الكود غير المتغير محذوف --
 
 fn main() {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     'gameloop: loop {
         for event in event_pump.poll_iter() {
-            // -- Unchanged code omitted --
+            // -- الكود غير المتغير محذوف --
         }
 
         for _ in 0..TICKS_PER_FRAME {
@@ -333,17 +333,17 @@ fn main() {
 }
 ```
 
-Some of you might feel this is a bit hackish (I somewhat agree with you). However, this is also how more 'sophisticated' systems work, with the exception that those CPUs usually have some way of notifying the screen that it's ready to redraw. Since the Chip-8 has no such mechanism nor any defined clock speed, this is a easier way to accomplish this task.
+قد يشعر بعضكم أن هذا غير دقيق بعض الشيء (وأنا أتفق معكم إلى حد ما). ومع ذلك، هذه أيضًا هي الطريقة التي تعمل بها الأنظمة الأكثر "تطورًا"، مع استثناء أن تلك المعالجات عادةً ما يكون لديها طريقة لإعلام الشاشة بأنها جاهزة لإعادة الرسم. نظرًا لأن Chip-8 لا تملك مثل هذه الآلية ولا أي سرعة ساعة محددة، فإن هذه طريقة أسهل لإنجاز هذه المهمة.
 
-If you run again, you might notice that it doesn't get very far before pausing. This is likely due to the fact that we never update our two timers, so the emulator has no concept of how long time has passed for its games. I mentioned earlier that the timers run once per frame, rather than at the clock speed, so we can modify the timers at the same point as when we modify the screen.
+إذا قمت بالتشغيل مرة أخرى، قد تلاحظ أن الأمر لا يصل بعيدًا قبل التوقف. هذا على الأرجح بسبب أننا لم نقم بتحديث المؤقتين لدينا، لذا فإن المحاكي ليس لديه مفهوم عن مقدار الوقت الذي مر لألعابه. لقد ذكرت سابقًا أن المؤقتين يعملان مرة واحدة لكل إطار، بدلًا من سرعة الساعة، لذا يمكننا تعديل المؤقتين في نفس النقطة التي نعدل فيها الشاشة.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     'gameloop: loop {
         for event in event_pump.poll_iter() {
-            // -- Unchanged code omitted --
+            // -- الكود غير المتغير محذوف --
         }
 
         for _ in 0..TICKS_PER_FRAME {
@@ -355,21 +355,21 @@ fn main() {
 }
 ```
 
-There's still a few things left to implement (you can't actually control your game for one) but it's a great start, and we're on the final stretches now!
+لا يزال هناك بعض الأشياء المتبقية للتنفيذ (على سبيل المثال، لا يمكنك التحكم في لعبتك) ولكنها بداية رائعة، ونحن في المراحل النهائية الآن!
 
-## Adding User Input
+## إضافة إدخال المستخدم
 
-We can finally render our Chip-8 game to the screen, but we can't get very far into playing it as we have no way to control it. Fortunately, SDL supports reading in inputs to the keyboard which we can translate and send to our backend emulation.
+يمكننا أخيرًا تقديم لعبة Chip-8 إلى الشاشة، ولكننا لا نستطيع التقدم كثيرًا في اللعب لأننا لا نملك طريقة للتحكم بها. لحسن الحظ، يدعم SDL قراءة المدخلات من لوحة المفاتيح والتي يمكننا ترجمتها وإرسالها إلى محاكاتنا الخلفية.
 
-As a refresher, the Chip-8 system supports 16 different keys. These are typically organized in a 4x4 grid, with keys 0-9 organized like a telephone with keys A-F surrounding. While you are welcome to organize the keys in any configuration you like, some game devs assumed they're in the grid pattern when choosing their games inputs, which means it can be awkward to play some games otherwise. For our emulator, we'll use the left-hand keys of the QWERTY keyboard as our inputs, as shown below.
+كمراجعة، يدعم نظام Chip-8 16 مفتاحًا مختلفًا. هذه المفاتيح عادةً ما تكون منظمة في شبكة 4x4، مع المفاتيح من 0 إلى 9 مرتبة مثل الهاتف والمفاتيح من A إلى F محيطة بها. بينما يمكنك تنظيم المفاتيح بأي تكوين تريده، افترض بعض مطوري الألعاب أنها في نمط الشبكة عند اختيار مدخلات ألعابهم، مما يعني أنه يمكن أن يكون من الصعب لعب بعض الألعاب بطريقة أخرى. بالنسبة لمحاكاتنا، سنستخدم المفاتيح اليسرى من لوحة المفاتيح QWERTY كمدخلاتنا، كما هو موضح أدناه.
 
-Let's create a function to convert SDL's key type into the values that we will send to the emulator. We'll need to bring SDL keyboard support into `main.rs` via:
+لنقم بإنشاء وظيفة لتحويل نوع المفتاح في SDL إلى القيم التي سنرسلها إلى المحاكي. سنحتاج إلى إدخال دعم لوحة المفاتيح في `main.rs` عبر:
 
 ```rust
 use sdl2::keyboard::Keycode;
 ```
 
-Now, we'll create a new function that will take in a `Keycode` and output an optional `u8` value. There are only 16 valid keys, so we'll wrap a valid output valid in `Some`, and return `None` if the user presses a non-Chip-8 key. This function is then just pattern matching all of the valid keys as outlined in the image above.
+الآن، سننشئ وظيفة جديدة تأخذ `Keycode` وتخرج قيمة `u8` اختيارية. هناك فقط 16 مفتاحًا صالحًا، لذا سنلف قيمة الإخراج الصالحة في `Some`، ونعيد `None` إذا ضغط المستخدم على مفتاح غير Chip-8. هذه الوظيفة هي مجرد مطابقة لجميع المفاتيح الصالحة كما هو موضح في الصورة أعلاه.
 
 ```rust
 fn key2btn(key: Keycode) -> Option<usize> {
@@ -395,13 +395,13 @@ fn key2btn(key: Keycode) -> Option<usize> {
 }
 ```
 
-![Keyboard to Chip-8 key layout](img/input_layout.png)
+![تخطيط لوحة المفاتيح إلى مفاتيح Chip-8](img/input_layout.png)
 
-Next, we'll add two additional events to our main event loop, one for `KeyDown` and the other for `KeyUp`. Each event will check if the pressed key gives a `Some` value from our `key2btn` function, and if so pass it to the emulator via the public `keypress` function we defined earlier. The only difference between the two will be if it sets or clears.
+بعد ذلك، سنضيف حدثين إضافيين إلى حلقة الأحداث الرئيسية، أحدهما لـ `KeyDown` والآخر لـ `KeyUp`. سيتم التحقق من كل حدث إذا كان المفتاح المضغوط يعطي قيمة `Some` من وظيفة `key2btn`، وإذا كان الأمر كذلك، يتم تمريرها إلى المحاكي عبر وظيفة `keypress` العامة التي قمنا بتعريفها سابقًا. الاختلاف الوحيد بين الاثنين هو ما إذا كان يتم تعيينها أو مسحها.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
     'gameloop: loop {
         for evt in event_pump.poll_iter() {
             match evt {
@@ -427,17 +427,17 @@ fn main() {
         chip8.tick_timers();
         draw_screen(&chip8, &mut canvas);
     }
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 }
 ```
 
-The `if let` statement is only satisfied if the value on the right matches that on the left, namely that `key2btn(key)` returns a `Some` value. The unwrapped value is then stored in `k`.
+عبارة `if let` تكون محققة فقط إذا كانت القيمة على اليمين تطابق تلك على اليسار، أي أن `key2btn(key)` تعيد قيمة `Some`. القيمة التي تم فكها يتم تخزينها بعد ذلك في `k`.
 
-Let's also add a common emulator ability - quitting the program by pressing Escape. We'll add that alongside our `Quit` event.
+لنضيف أيضًا قدرة شائعة في المحاكيات - إغلاق البرنامج بالضغط على Escape. سنضيف ذلك بجانب حدث `Quit`.
 
 ```rust
 fn main() {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
     'gameloop: loop {
         for evt in event_pump.poll_iter() {
             match evt {
@@ -464,16 +464,16 @@ fn main() {
         chip8.tick_timers();
         draw_screen(&chip8, &mut canvas);
     }
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 }
 ```
 
-Unlike the other key events, where we would check the found `key` variable, we want to use the Escape key to quit. If you don't want this ability in your emulator, or would like some other key press functionality, you're welcome to do so.
+على عكس أحداث المفاتيح الأخرى، حيث نتحقق من المتغير `key` الذي تم العثور عليه، نريد استخدام مفتاح Escape للإغلاق. إذا كنت لا تريد هذه القدرة في محاكاتك، أو تريد بعض الوظائف الأخرى للضغط على المفاتيح، فأنت مرحب بذلك.
 
-That's it! The desktop frontend of our Chip-8 emulator is now complete. We can specify a game via a command line parameter, load and execute it, display the output to the screen, and handle user input.
+هذا كل شيء! الواجهة الأمامية لمحاكي Chip-8 لدينا على سطح المكتب مكتملة الآن. يمكننا تحديد لعبة عبر معلمة سطر الأوامر، وتحميلها وتنفيذها، وعرض الإخراج على الشاشة، والتعامل مع إدخال المستخدم.
 
-I hope you were able to get an understanding of how emulation works. Chip-8 is a rather basic system, but the techniques discussed here form the basis for how all emulation works.
+آمل أن تكون قد تمكنت من فهم كيفية عمل المحاكاة. نظام Chip-8 هو نظام بسيط إلى حد ما، ولكن التقنيات التي تمت مناقشتها هنا تشكل الأساس لكيفية عمل جميع المحاكيات.
 
-However, this guide isn't done! In the next section I will discuss how to build our emulator with WebAssembly and getting it to run in a web browser.
+ومع ذلك، هذا الدليل لم ينته بعد! في القسم التالي سأناقش كيفية بناء محاكاتنا باستخدام WebAssembly وجعله يعمل في متصفح الويب.
 
 \newpage
