@@ -1,23 +1,23 @@
-# Opcode Execution
+# تنفيذ الأوامر (Opcode Execution)
 
-In the previous section, we fetched our opcode and were preparing to decode which instruction it corresponds to to execute that instruction. Currently, our `tick` function looks like this:
+في القسم السابق، قمنا بجلب الـ opcode وكنا نستعد لفك تشفير التعليمات التي يتوافق معها لتنفيذ تلك التعليمات. حاليًا، تبدو وظيفة `tick` كما يلي:
 
 ```rust
 pub fn tick(&mut self) {
-    // Fetch
+    // الجلب
     let op = self.fetch();
-    // Decode
-    // Execute
+    // فك التشفير
+    // التنفيذ
 }
 ```
 
-This implies that decode and execute will be their own separate functions. While they could be, for Chip-8 it's easier to simply perform the operation as we determine it, rather than involving another function call. Our `tick` function thus becomes this:
+هذا يعني أن فك التشفير والتنفيذ سيكونان وظيفتين منفصلتين. بينما يمكن أن يكونا كذلك، بالنسبة لـ Chip-8، من الأسهل ببساطة تنفيذ العملية أثناء تحديدها، بدلاً من تضمين استدعاء وظيفة أخرى. وبالتالي تصبح وظيفة `tick` كما يلي:
 
 ```rust
 pub fn tick(&mut self) {
-    // Fetch
+    // الجلب
     let op = self.fetch();
-    // Decode & execute
+    // فك التشفير والتنفيذ
     self.execute(op);
 }
 
@@ -26,11 +26,11 @@ fn execute(&mut self, op: u16) {
 }
 ```
 
-Our next step is to *decode*, or determine exactly which operation we're dealing with. The [Chip-8 opcode cheatsheet](#ot) has all of the available opcodes, how to interpret their parameters, and some notes on what they mean. You will need to reference this often. For a complete emulator, each and every one of them must be implemented.
+خطوتنا التالية هي *فك التشفير*، أو تحديد بالضبط أي عملية نتعامل معها. تحتوي [ورقة الغش الخاصة بأوامر Chip-8](#ot) على جميع الأوامر المتاحة، وكيفية تفسير معاملاتها، وبعض الملاحظات حول معناها. ستحتاج إلى الرجوع إليها كثيرًا. بالنسبة لمحاكي كامل، يجب تنفيذ كل واحدة منها.
 
-## Pattern Matching
+## مطابقة الأنماط (Pattern Matching)
 
-Fortunately, Rust has a very robust and useful pattern matching feature we can use to our advantage. However, we will need to separate out each hex "digit" before we do so.
+لحسن الحظ، تمتلك Rust ميزة مطابقة الأنماط القوية والمفيدة التي يمكننا استخدامها لصالحنا. ومع ذلك، سنحتاج إلى فصل كل "رقم" سداسي عشري قبل القيام بذلك.
 
 ```rust
 fn execute(&mut self, op: u16) {
@@ -41,7 +41,7 @@ fn execute(&mut self, op: u16) {
 }
 ```
 
-Perhaps not the cleanest code, but we need each hex digit separately. From here, we can create a `match` statement where we can specify the patterns for all of our opcodes:
+ربما ليس هذا الكود الأكثر نظافة، ولكننا نحتاج إلى كل رقم سداسي عشري بشكل منفصل. من هنا، يمكننا إنشاء عبارة `match` حيث يمكننا تحديد الأنماط لجميع أوامرنا:
 
 ```rust
 fn execute(&mut self, op: u16) {
@@ -56,21 +56,21 @@ fn execute(&mut self, op: u16) {
 }
 ```
 
-Rust's `match` statement demands that all possible options be taken into account which is done with the `_` variable, which captures "everything else". Inside, we'll use the `unimplemented!` macro to cause the program to panic if it reaches that point. By the time we finish adding all opcodes, the Rust compiler demands that we still have an "everything else" statement, but we should never hit it.
+تتطلب عبارة `match` في Rust أن يتم أخذ جميع الخيارات الممكنة في الاعتبار، وهو ما يتم باستخدام المتغير `_`، الذي يلتقط "كل شيء آخر". في الداخل، سنستخدم الماكرو `unimplemented!` للتسبب في ذعر البرنامج إذا وصل إلى هذه النقطة. بحلول الوقت الذي ننتهي فيه من إضافة جميع الأوامر، يطالب مترجم Rust بأن يكون لدينا عبارة "كل شيء آخر"، ولكننا لا ينبغي أن نصل إليها أبدًا.
 
-While a long `match` statement would certainly work for other architectures, it is usually more common to implement instructions in their own functions, and either use a lookup table or programmatically determine which function is correct. Chip-8 is somewhat unusual because it stores instruction parameters into the opcode itself, meaning we need a lot of wild cards to match the instructions. Since there are a relatively small number of them, a `match` statement works well here.
+بينما يمكن أن تعمل عبارة `match` الطويلة بالتأكيد مع بنى أخرى، فمن الشائع أكثر تنفيذ التعليمات في وظائفها الخاصة، واستخدام جدول بحث أو تحديد الوظيفة الصحيحة برمجيًا. Chip-8 غير عادية بعض الشيء لأنها تخزن معلمات التعليمات في الـ opcode نفسه، مما يعني أننا نحتاج إلى الكثير من الرموز البديلة لمطابقة التعليمات. نظرًا لوجود عدد صغير نسبيًا منها، تعمل عبارة `match` بشكل جيد هنا.
 
-With the framework setup, let's dive in!
+مع إعداد الإطار، دعنا نبدأ!
 
-## Intro to Implementing Opcodes
+## مقدمة لتنفيذ الأوامر
 
-The following pages individually discuss how all of Chip-8's instructions work, and include code of how to implement them. You are welcome to simply follow along and implement instruction by instruction, but before you do that, you may want to look forward to the [next section](#dfe) and begin working on some of the frontend code. Currently we have no way of actually running our emulator, and it may be useful to some to be able to attempt to load and run a game for debugging. However, do remember that the emulator will likely crash rather quickly unless all of the instructions are implemented. Personally, I prefer to work on the instructions first before working on the other moving parts (hence why this guide is laid out the way it is).
+تناقش الصفحات التالية كيفية عمل جميع تعليمات Chip-8، وتتضمن كودًا لكيفية تنفيذها. أنت مرحب ببساطة باتباعها وتنفيذ التعليمات واحدة تلو الأخرى، ولكن قبل أن تفعل ذلك، قد ترغب في النظر إلى [القسم التالي](#dfe) والبدء في العمل على بعض كود الواجهة الأمامية. حاليًا، ليس لدينا طريقة لتشغيل المحاكي فعليًا، وقد يكون من المفيد لبعض الأشخاص محاولة تحميل وتشغيل لعبة لأغراض التصحيح. ومع ذلك، تذكر أن المحاكي من المحتمل أن يتعطل بسرعة كبيرة ما لم يتم تنفيذ جميع التعليمات. شخصيًا، أفضل العمل على التعليمات أولاً قبل العمل على الأجزاء المتحركة الأخرى (ولهذا تم وضع هذا الدليل بهذه الطريقة).
 
-With that disclaimer out of the way, let's proceed to working on each of the Chip-8 instructions in turn.
+مع هذا التحذير، دعنا ننتقل إلى العمل على كل تعليمات Chip-8 بالترتيب.
 
 ### 0000 - Nop
 
-Our first instruction is the simplest one - do nothing. This may seem like a silly one to have, but sometimes it's needed for timing or alignment purposes. In any case, we simply need to move on to the next opcode (which was already done in `fetch`), and return.
+أول تعليمة لدينا هي الأبسط - لا تفعل شيئًا. قد يبدو هذا سخيفًا، ولكن في بعض الأحيان يكون ضروريًا لأغراض التوقيت أو المحاذاة. على أي حال، نحتاج ببساطة إلى الانتقال إلى الـ opcode التالي (الذي تم بالفعل في `fetch`)، والعودة.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
@@ -80,30 +80,30 @@ match (digit1, digit2, digit3, digit4) {
 }
 ```
 
-### 00E0 - Clear screen
+### 00E0 - مسح الشاشة
 
-Opcode 0x00E0 is the instruction to clear the screen, which means we need to reset our screen buffer to be empty again.
+الـ opcode 0x00E0 هو التعليمات لمسح الشاشة، مما يعني أننا بحاجة إلى إعادة تعيين مخزن الشاشة ليكون فارغًا مرة أخرى.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // CLS
     (0, 0, 0xE, 0) => {
         self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 00EE - Return from Subroutine
+### 00EE - العودة من الروتين الفرعي
 
-We haven't yet spoken about subroutines (aka functions) and how they work. Entering into a subroutine works in the same way as a plain jump; we move the PC to the specified address and resume execution from there. Unlike a jump, a subroutine is expected to complete at some point, and we will need to return back to the point where we entered. This is where our stack comes in. When we enter a subroutine, we simply push our address onto the stack, run the routine's code, and when we're ready to return we pop that value off our stack and execute from that point again. A stack also allows us to maintain return addresses for nested subroutines while ensuring they are returned in the correct order.
+لم نتحدث بعد عن الروتينات الفرعية (المعروفة أيضًا باسم الوظائف) وكيف تعمل. الدخول إلى روتين فرعي يعمل بنفس طريقة القفز العادي؛ ننقل عداد البرنامج (PC) إلى العنوان المحدد ونستأنف التنفيذ من هناك. على عكس القفز، من المتوقع أن يكمل الروتين الفرعي في مرحلة ما، وسنحتاج إلى العودة إلى النقطة التي دخلنا منها. هذا هو المكان الذي يأتي فيه المكدس. عندما ندخل إلى روتين فرعي، ندفع ببساطة عنواننا إلى المكدس، ونشغل كود الروتين، وعندما نكون مستعدين للعودة، نخرج هذه القيمة من المكدس وننفذ من تلك النقطة مرة أخرى. يسمح لنا المكدس أيضًا بالحفاظ على عناوين العودة للروتينات الفرعية المتداخلة مع ضمان إعادتها بالترتيب الصحيح.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // RET
     (0, 0, 0xE, 0xE) => {
@@ -111,17 +111,17 @@ match (digit1, digit2, digit3, digit4) {
         self.pc = ret_addr;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 1NNN - Jump
+### 1NNN - القفز
 
-The jump instruction is pretty easy to add, simply move the PC to the given address.
+تعليمة القفز سهلة الإضافة، ببساطة انقل عداد البرنامج (PC) إلى العنوان المحدد.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // JMP NNN
     (1, _, _, _) => {
@@ -129,19 +129,19 @@ match (digit1, digit2, digit3, digit4) {
         self.pc = nnn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-The main thing to notice here is that this opcode is defined by '0x1' being the most significant digit. The other digits are used as parameters for this operation, hence the `_` placeholder in our match statement, here we want anything starting with a 1, but ending in any three digits to enter this statement.
+الشيء الرئيسي الذي يجب ملاحظته هنا هو أن هذا الـ opcode يتم تعريفه بـ '0x1' كأكثر رقم معنوي. الأرقام الأخرى تستخدم كمعاملات لهذه العملية، ومن هنا جاء الرمز `_` في عبارة المطابقة، هنا نريد أي شيء يبدأ بـ 1، ولكن ينتهي بأي ثلاثة أرقام للدخول إلى هذه العبارة.
 
-### 2NNN - Call Subroutine
+### 2NNN - استدعاء روتين فرعي
 
-The opposite of our 'Return from Subroutine' operation, we are going to add our current PC to the stack, and then jump to the given address. If you skipped straight here, I recommend reading the *Return* section for additional context.
+عكس عملية "العودة من الروتين الفرعي"، سنقوم بإضافة عداد البرنامج الحالي إلى المكدس، ثم القفز إلى العنوان المحدد. إذا قفزت مباشرة إلى هنا، أوصي بقراءة قسم *العودة* للحصول على سياق إضافي.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // CALL NNN
     (2, _, _, _) => {
@@ -150,17 +150,17 @@ match (digit1, digit2, digit3, digit4) {
         self.pc = nnn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 3XNN - Skip next if VX == NN
+### 3XNN - تخطي التالي إذا كان VX == NN
 
-This opcode is first of a few that follow a similar pattern. For those who are unfamiliar with assembly, being able to skip a line gives similar functionality to an if-else block. We can make a comparison, and if true go to one instruction, and if false go somewhere else. This is also the first opcode which will use one of our *V registers*. In this case, the second digit tells us which register to use, while the last two digits provide the raw value.
+هذا الـ opcode هو الأول من بين عدد قليل يتبع نمطًا مشابهًا. بالنسبة لأولئك الذين ليسوا على دراية بلغة التجميع، فإن القدرة على تخطي سطر تعطي وظيفة مشابهة لكتلة if-else. يمكننا إجراء مقارنة، وإذا كانت النتيجة صحيحة نذهب إلى تعليمة واحدة، وإذا كانت خاطئة نذهب إلى مكان آخر. هذا أيضًا هو أول opcode يستخدم أحد *سجلات V*. في هذه الحالة، يخبرنا الرقم الثاني أي سجل نستخدمه، بينما يوفر الرقمان الأخيران القيمة الخام.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // SKIP VX == NN
     (3, _, _, _) => {
@@ -171,19 +171,19 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-The implementation works like this: since we already have the second digit saved to a variable, we will reuse it for our 'X' index, although cast to a `usize`, as Rust requires all array indexing to be done with a `usize` variable. If that value stored in that register equals `nn`, then we skip the next opcode, which is the same as skipping our PC ahead by two bytes.
+يعمل التنفيذ على النحو التالي: نظرًا لأننا لدينا بالفعل الرقم الثاني محفوظ في متغير، سنعيد استخدامه لفهرس 'X' الخاص بنا، على الرغم من تحويله إلى `usize`، حيث تتطلب Rust أن يتم فهرسة المصفوفات باستخدام متغير `usize`. إذا كانت القيمة المخزنة في هذا السجل تساوي `nn`، فإننا نتخطى الـ opcode التالي، وهو نفس تخطي عداد البرنامج (PC) بمقدار بايتين.
 
-### 4XNN - Skip next if VX != NN
+### 4XNN - تخطي التالي إذا كان VX != NN
 
-This opcode is exactly the same as the previous, except we skip if the compared values are not equal.
+هذا الـ opcode هو بالضبط نفس السابق، إلا أننا نتخطى إذا كانت القيم المقارنة غير متساوية.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // SKIP VX != NN
     (4, _, _, _) => {
@@ -194,17 +194,17 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 5XY0 - Skip next if VX == VY
+### 5XY0 - تخطي التالي إذا كان VX == VY
 
-A similar operation again, however we now use the third digit to index into another *V Register*. You will also notice that the least significant digit is not used in the operation. This opcode requires it to be 0.
+عملية مشابهة مرة أخرى، ولكننا الآن نستخدم الرقم الثالث للفهرسة في سجل *V* آخر. ستلاحظ أيضًا أن الرقم الأقل أهمية لا يستخدم في العملية. يتطلب هذا الـ opcode أن يكون 0.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // SKIP VX == VY
     (5, _, _, 0) => {
@@ -215,17 +215,17 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 6XNN - VX = NN
 
-Set the *V Register* specified by the second digit to the value given.
+قم بتعيين سجل *V* المحدد بواسطة الرقم الثاني إلى القيمة المعطاة.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX = NN
     (6, _, _, _) => {
@@ -234,17 +234,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] = nn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 7XNN - VX += NN
 
-This operation adds the given value to the VX register. In the event of an overflow, Rust will panic, so we need to use a different method than the typical addition operator. Note also that while Chip-8 has a carry flag (more on that later), it is not modified by this operation.
+تقوم هذه العملية بإضافة القيمة المعطاة إلى سجل VX. في حالة التدفق الزائد، سيتسبب Rust في ذعر، لذا نحتاج إلى استخدام طريقة مختلفة عن عامل الجمع المعتاد. لاحظ أيضًا أنه بينما يحتوي Chip-8 على علامة حمل (المزيد عن ذلك لاحقًا)، إلا أنها لا يتم تعديلها بواسطة هذه العملية.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX += NN
     (7, _, _, _) => {
@@ -253,17 +253,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] = self.v_reg[x].wrapping_add(nn);
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 8XY0 - VX = VY
 
-Like the `VX = NN` operation, but the source value is from the VY register.
+مثل عملية `VX = NN`، ولكن القيمة المصدر هي من سجل VY.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX = VY
     (8, _, _, 0) => {
@@ -272,17 +272,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] = self.v_reg[y];
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 8XY1, 8XY2, 8XY3 - Bitwise operations
+### 8XY1, 8XY2, 8XY3 - العمليات البتية
 
-The `8XY1`, `8XY2`, and `8XY3` opcodes are all similar functions, so rather than repeat myself three times over, I'll implement the *OR* operation, and allow the reader to implement the other two.
+أكواد `8XY1`، `8XY2`، و `8XY3` هي جميعها وظائف متشابهة، لذا بدلاً من تكرار نفسي ثلاث مرات، سأقوم بتنفيذ عملية *OR*، وأسمح للقارئ بتنفيذ العمليتين الأخريين.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX |= VY
     (8, _, _, 1) => {
@@ -291,17 +291,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] |= self.v_reg[y];
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 8XY4 - VX += VY
 
-This operation has two aspects to make note of. Firstly, this operation has the potential to overflow, which will cause a panic in Rust if not handled correctly. Secondly, this operation is the first to utilize the `VF` flag register. I've touched upon it previously, but while the first 15 *V* registers are general usage, the final 16th (0xF) register doubles as the *flag register*. Flag registers are common in many CPU processors; in the case of Chip-8 it also stores the *carry flag*, basically a special variable that notes if the last application operation resulted in an overflow/underflow. Here, if an overflow were to happen, we need to set the `VF` to be 1, or 0 if not. With these two aspects in mind, we will use Rust's `overflowing_add` attribute, which will return a tuple of both the wrapped sum, as well as a boolean of whether an overflow occurred.
+هذه العملية لها جانبين يجب ملاحظتهما. أولاً، هذه العملية لديها القدرة على التدفق الزائد، مما سيسبب ذعرًا في Rust إذا لم يتم التعامل معها بشكل صحيح. ثانيًا، هذه العملية هي الأولى التي تستخدم سجل `VF` كعلامة. لقد ذكرت ذلك سابقًا، ولكن بينما تكون أول 15 سجلًا من *V* للاستخدام العام، فإن السجل السادس عشر (0xF) يعمل أيضًا كـ *سجل العلامات*. سجلات العلامات شائعة في العديد من معالجات وحدة المعالجة المركزية؛ في حالة Chip-8، فإنه يخزن أيضًا *علامة الحمل*، وهي بشكل أساسي متغير خاص يلاحظ إذا كانت آخر عملية تطبيق أدت إلى تدفق زائد/تدفق تحت. هنا، إذا حدث تدفق زائد، نحتاج إلى تعيين `VF` ليكون 1، أو 0 إذا لم يحدث. مع أخذ هذين الجانبين في الاعتبار، سنستخدم سمة `overflowing_add` في Rust، والتي ستعيد مجموعة من كل من المجموع الملتف، بالإضافة إلى قيمة منطقية تشير إلى ما إذا كان قد حدث تدفق زائد.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX += VY
     (8, _, _, 4) => {
@@ -315,16 +315,16 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[0xF] = new_vf;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 ### 8XY5 - VX -= VY
 
-This is the same operation as the previous opcode, but with subtraction rather than addition. The key distinction is that the `VF` carry flag works in the opposite fashion. The addition operation would set the flag to 1 if an overflow occurred, here if an underflow occurs, it is set to 0, and vice versa. The `overflowing_sub` method will be of use to us here.
+هذه العملية مشابهة للعملية السابقة، ولكن مع الطرح بدلاً من الجمع. الفرق الرئيسي هو أن علم الحمل `VF` يعمل بشكل معاكس. في عملية الجمع، يتم تعيين العلم إلى 1 إذا حدث تجاوز، أما هنا في حالة الطرح، إذا حدث نقص، يتم تعيين العلم إلى 0، والعكس صحيح. سنستخدم هنا الدالة `overflowing_sub`.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX -= VY
     (8, _, _, 5) => {
@@ -338,17 +338,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[0xF] = new_vf;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 8XY6 - VX >>= 1
 
-This operation performs a single right shift on the value in VX, with the bit that was dropped off being stored into the `VF` register. Unfortunately, there isn't a built-in Rust `u8` operator to catch the dropped bit, so we will have to do it ourself.
+تقوم هذه العملية بإزاحة واحدة إلى اليمين للقيمة في VX، مع تخزين البت الذي تم إسقاطه في السجل `VF`. لسوء الحظ، لا يوجد عامل تشغيل مدمج في Rust لالتقاط البت المسقط، لذا سنقوم بذلك يدويًا.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX >>= 1
     (8, _, _, 6) => {
@@ -358,17 +358,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[0xF] = lsb;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 8XY7 - VX = VY - VX
 
-This operation works the same as the previous VX -= VY operation, but with the operands in the opposite direction.
+تعمل هذه العملية بنفس طريقة العملية السابقة VX -= VY، ولكن مع تبديل المعاملات.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX = VY - VX
     (8, _, _, 7) => {
@@ -382,17 +382,17 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[0xF] = new_vf;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### 8XYE - VX <<= 1
 
-Similar to the right shift operation, but we store the value that is overflowed in the flag register.
+تشبه عملية الإزاحة إلى اليمين، ولكننا نخزن القيمة التي تم تجاوزها في سجل العلم.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX <<= 1
     (8, _, _, 0xE) => {
@@ -402,19 +402,19 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[0xF] = msb;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### 9XY0 - Skip if VX != VY
+### 9XY0 - تخطي إذا VX != VY
 
-Done with the 0x8000 operations, it's time to go back and add an opcode that was notably missing, skipping the next line if VX != VY. This is the same code as the 5XY0 operation, but with an inequality.
+بعد الانتهاء من عمليات 0x8000، حان الوقت لإضافة عملية كانت مفقودة، وهي تخطي السطر التالي إذا كانت VX لا تساوي VY. هذا الكود مشابه لعملية 5XY0، ولكن مع عدم المساواة.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // SKIP VX != VY
+    // تخطي إذا VX != VY
     (9, _, _, 0) => {
         let x = digit2 as usize;
         let y = digit3 as usize;
@@ -423,17 +423,17 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### ANNN - I = NNN
 
-This is the first instruction to utilize the *I Register*, which will be used in several additional instructions, primarily as an address pointer to RAM. In this case, we are simply setting it to the 0xNNN value encoded in this opcode.
+هذه هي العملية الأولى التي تستخدم *سجل I*، والذي سيتم استخدامه في عدة عمليات إضافية، بشكل أساسي كمؤشر عنوان إلى الذاكرة العشوائية. في هذه الحالة، نقوم ببساطة بتعيينه إلى القيمة 0xNNN المشفرة في هذه العملية.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // I = NNN
     (0xA, _, _, _) => {
@@ -441,51 +441,51 @@ match (digit1, digit2, digit3, digit4) {
         self.i_reg = nnn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### BNNN - Jump to V0 + NNN
+### BNNN - القفز إلى V0 + NNN
 
-While previous instructions have used the *V Register* specified within the opcode, this instruction always uses the first *V0* register. This operation moves the PC to the sum of the value stored in *V0* and the raw value 0xNNN supplied in the opcode.
+بينما استخدمت العمليات السابقة *سجل V* المحدد في العملية، فإن هذه العملية تستخدم دائمًا *سجل V0*. تقوم هذه العملية بنقل PC إلى مجموع القيمة المخزنة في *V0* والقيمة الخام 0xNNN المقدمة في العملية.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // JMP V0 + NNN
+    // القفز إلى V0 + NNN
     (0xB, _, _, _) => {
         let nnn = op & 0xFFF;
         self.pc = (self.v_reg[0] as u16) + nnn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### CXNN - VX = rand() & NN
 
-Finally, something to shake up the monotony! This opcode is Chip-8's random number generation, with a slight twist, in that the random number is then AND'd with the lower 8-bits of the opcode. While the Rust development team has released a random generation crate, it is not part of its standard library, so we shall have to add it to our project.
+أخيرًا، شيء لكسر الرتابة! هذه العملية هي عملية توليد الأرقام العشوائية في Chip-8، مع لمسة خاصة، حيث يتم بعد ذلك تطبيق عملية AND على الرقم العشوائي مع أقل 8 بتات من العملية. بينما أصدر فريق Rust مكتبة لتوليد الأرقام العشوائية، إلا أنها ليست جزءًا من المكتبة القياسية، لذا سنضيفها إلى مشروعنا.
 
-In `chip8_core/Cargo.toml`, add the following line somewhere under `[dependencies]`:
+في `chip8_core/Cargo.toml`، أضف السطر التالي في مكان ما تحت `[dependencies]`:
 
 ```toml
 rand = "^0.7.3"
 ```
 
-Note: If you are planning on following this guide completely to its end, there will be a future change to how we include this library for web browser support. However, at this stage in the project, it is enough to specify it as is.
+ملاحظة: إذا كنت تخطط لاتباع هذا الدليل حتى النهاية، ستكون هناك تغييرات مستقبلية حول كيفية تضمين هذه المكتبة لدعم متصفح الويب. ومع ذلك، في هذه المرحلة من المشروع، يكفي تحديدها كما هي.
 
-Time now to add RNG support and implement this opcode. At the top of `lib.rs`, we will need to import a function from the `rand` crate:
+حان الوقت الآن لإضافة دعم توليد الأرقام العشوائية وتنفيذ هذه العملية. في أعلى `lib.rs`، سنحتاج إلى استيراد دالة من مكتبة `rand`:
 
 ```rust
 use rand::random;
 ```
 
-We will then use the `random` function when implementing our opcode:
+سنستخدم بعد ذلك الدالة `random` عند تنفيذ العملية:
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX = rand() & NN
     (0xC, _, _, _) => {
@@ -495,53 +495,53 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] = rng & nn;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-Note that specifying `rng` as a `u8` variable is necessary for the `random()` function to know which type it is supposed to generate.
+لاحظ أن تحديد `rng` كمتغير من النوع `u8` ضروري حتى تعرف الدالة `random()` النوع الذي يجب أن تولده.
 
-### DXYN - Draw Sprite
+### DXYN - رسم Sprite
 
-This is probably the single most complicated opcode, so allow me to take a moment to describe how it works in detail. Rather than drawing individual pixels or rectangles to the screen at a time, the Chip-8 display works by drawing *sprites*, images stored in memory that are copied to the screen at a specified (x, y). For this opcode, the second and third digits give us which *V Registers* we are to fetch our (x, y) coordinates from. So far so good. Chip-8's sprites are always 8 pixels wide, but can be a variable number of pixels tall, from 1 to 16. This is specified in the final digit of our opcode. I mentioned earlier that the *I Register* is used frequently to store an address in memory, and this is the case here; our sprites are stored row by row *beginning* at the address stored in *I*. So if we are told to draw a 3px tall sprite, the first row's data is stored at \*I, followed by \*I + 1, then \*I + 2. This explains why all sprites are 8 pixels wide, each row is assigned a byte, which is 8-bits, one for each pixel, black or white. The last detail to note is that if *any* pixel is flipped from white to black or vice versa, the *VF* is set (and cleared otherwise). With these things in mind, let's begin.
+هذه العملية هي على الأرجح الأكثر تعقيدًا، لذا اسمح لي أن أشرح بالتفصيل كيفية عملها. بدلاً من رسم وحدات البكسل الفردية أو المستطيلات على الشاشة في كل مرة، تعرض شاشة Chip-8 *sprites*، وهي صور مخزنة في الذاكرة يتم نسخها إلى الشاشة في إحداثيات محددة (x, y). بالنسبة لهذه العملية، يعطينا الرقمان الثاني والثالث *سجلات V* التي سنستخدمها لجلب إحداثيات (x, y). حتى الآن، الأمور جيدة. Sprites في Chip-8 تكون دائمًا بعرض 8 وحدات بكسل، ولكن يمكن أن يكون ارتفاعها متغيرًا من 1 إلى 16. يتم تحديد ذلك في الرقم الأخير من العملية. ذكرت سابقًا أن *سجل I* يستخدم بشكل متكرر لتخزين عنوان في الذاكرة، وهذا هو الحال هنا؛ يتم تخزين sprites الخاصة بنا صفًا تلو الآخر *بدءًا* من العنوان المخزن في *I*. لذا إذا طُلب منا رسم sprite بارتفاع 3 وحدات بكسل، فإن بيانات الصف الأول مخزنة في \*I، يليها \*I + 1، ثم \*I + 2. هذا يفسر سبب كون جميع sprites بعرض 8 وحدات بكسل، حيث يتم تعيين بايت واحد لكل صف، وهو 8 بتات، واحد لكل بكسل، أسود أو أبيض. التفصيل الأخير الذي يجب ملاحظته هو أنه إذا تم تغيير أي بكسل من الأبيض إلى الأسود أو العكس، يتم تعيين *VF* (ويتم مسحه في حالة عدم التغيير). مع وضع هذه الأشياء في الاعتبار، دعنا نبدأ.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // DRAW
+    // رسم
     (0xD, _, _, _) => {
-        // Get the (x, y) coords for our sprite
+        // الحصول على إحداثيات (x, y) للـ sprite
         let x_coord = self.v_reg[digit2 as usize] as u16;
         let y_coord = self.v_reg[digit3 as usize] as u16;
-        // The last digit determines how many rows high our sprite is
+        // الرقم الأخير يحدد عدد الصفوف التي يتكون منها الـ sprite
         let num_rows = digit4;
 
-        // Keep track if any pixels were flipped
+        // تتبع إذا تم تغيير أي وحدات بكسل
         let mut flipped = false;
-        // Iterate over each row of our sprite
+        // التكرار على كل صف من الـ sprite
         for y_line in 0..num_rows {
-            // Determine which memory address our row's data is stored
+            // تحديد عنوان الذاكرة الذي يتم فيه تخزين بيانات الصف
             let addr = self.i_reg + y_line as u16;
             let pixels = self.ram[addr as usize];
-            // Iterate over each column in our row
+            // التكرار على كل عمود في الصف
             for x_line in 0..8 {
-                // Use a mask to fetch current pixel's bit. Only flip if a 1
+                // استخدام قناع لجلب بت البكسل الحالي. يتم التغيير فقط إذا كان البت 1
                 if (pixels & (0b1000_0000 >> x_line)) != 0 {
-                    // Sprites should wrap around screen, so apply modulo
+                    // يجب أن تلتف الـ sprites حول الشاشة، لذا نطبق عملية modulo
                     let x = (x_coord + x_line) as usize % SCREEN_WIDTH;
                     let y = (y_coord + y_line) as usize % SCREEN_HEIGHT;
 
-                    // Get our pixel's index for our 1D screen array
+                    // الحصول على فهرس البكسل لمصفوفة الشاشة أحادية البعد
                     let idx = x + SCREEN_WIDTH * y;
-                    // Check if we're about to flip the pixel and set
+                    // التحقق مما إذا كنا على وشك تغيير البكسل وتعيين
                     flipped |= self.screen[idx];
                     self.screen[idx] ^= true;
                 }
             }
         }
 
-        // Populate VF register
+        // تعيين سجل VF
         if flipped {
             self.v_reg[0xF] = 1;
         } else {
@@ -549,19 +549,19 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### EX9E - Skip if Key Pressed
+### EX9E - تخطي إذا تم الضغط على المفتاح
 
-Time at last to introduce user input. When setting up our emulator object, I mentioned that there are 16 possible keys numbered 0 to 0xF. This instruction checks if the index stored in VX is pressed, and if so, skips the next instruction.
+حان الوقت أخيرًا لإدخال إدخال المستخدم. عند إعداد كائن المحاكاة الخاص بنا، ذكرت أن هناك 16 مفتاحًا ممكنًا مرقمًا من 0 إلى 0xF. تتحقق هذه العملية مما إذا كان المفتاح المخزن في VX مضغوطًا، وإذا كان الأمر كذلك، تتخطى العملية التالية.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // SKIP KEY PRESS
+    // تخطي إذا تم الضغط على المفتاح
     (0xE, _, 9, 0xE) => {
         let x = digit2 as usize;
         let vx = self.v_reg[x];
@@ -571,19 +571,19 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### EXA1 - Skip if Key Not Pressed
+### EXA1 - تخطي إذا لم يتم الضغط على المفتاح
 
-Same as the previous instruction, however this time the next instruction is skipped if the key in question is not being pressed.
+نفس العملية السابقة، ولكن هذه المرة يتم تخطي العملية التالية إذا لم يتم الضغط على المفتاح المحدد.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // SKIP KEY RELEASE
+    // تخطي إذا لم يتم الضغط على المفتاح
     (0xE, _, 0xA, 1) => {
         let x = digit2 as usize;
         let vx = self.v_reg[x];
@@ -593,17 +593,17 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### FX07 - VX = DT
 
-I mentioned the use of the *Delay Timer* when we were setting up the emulation structure. This timer ticks down every frame until reaching zero. However, that operation happens automatically, it would be really useful to be able to actually see what's in the *Delay Timer* for our game's timing purposes. This instruction does just that, and stores the current value into one of the *V Registers* for us to use.
+ذكرت استخدام *مؤقت التأخير* عندما كنا نقوم بإعداد بنية المحاكاة. هذا المؤقت ينقص كل إطار حتى يصل إلى الصفر. ومع ذلك، فإن هذه العملية تحدث تلقائيًا، سيكون من المفيد حقًا أن نتمكن من رؤية ما يوجد في *مؤقت التأخير* لأغراض توقيت اللعبة. تقوم هذه العملية بذلك، وتخزن القيمة الحالية في أحد *سجلات V* لاستخدامها.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // VX = DT
     (0xF, _, 0, 7) => {
@@ -611,19 +611,19 @@ match (digit1, digit2, digit3, digit4) {
         self.v_reg[x] = self.dt;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### FX0A - Wait for Key Press
+### FX0A - انتظار الضغط على المفتاح
 
-While we already had instructions to check if keys are either pressed or released, this instruction does something very different. Unlike those, which checked the key state and then moved on, this instruction is *blocking*, meaning the whole game will pause and wait for as long as it needs to until the player presses a key. That means it needs to loop endlessly until something in our `keys` array turns true. Once a key is found, it is stored into VX. If more than one key is currently being pressed, it takes the lowest indexed one.
+بينما كانت لدينا بالفعل عمليات للتحقق مما إذا كانت المفاتيح مضغوطة أو غير مضغوطة، فإن هذه العملية تفعل شيئًا مختلفًا تمامًا. على عكس تلك العمليات، التي تحقق من حالة المفتاح ثم تستمر، فإن هذه العملية *توقف التنفيذ*، مما يعني أن اللعبة بأكملها ستتوقف وتنتظر طالما كان ذلك ضروريًا حتى يضغط اللاعب على مفتاح. هذا يعني أنها تحتاج إلى التكرار بلا نهاية حتى يصبح شيء ما في مصفوفة `keys` صحيحًا. بمجرد العثور على مفتاح، يتم تخزينه في VX. إذا كان هناك أكثر من مفتاح مضغوط حاليًا، يتم أخذ المفتاح ذي الفهرس الأصغر.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // WAIT KEY
+    // انتظار الضغط على المفتاح
     (0xF, _, 0, 0xA) => {
         let x = digit2 as usize;
         let mut pressed = false;
@@ -636,24 +636,24 @@ match (digit1, digit2, digit3, digit4) {
         }
 
         if !pressed {
-            // Redo opcode
+            // إعادة تنفيذ العملية
             self.pc -= 2;
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-You may be looking at this implementation and asking "why are we resetting the opcode and going through the entire fetch sequence again, rather than simply doing this in a loop?". Simply put, while we want this instruction to block future instructions from running, we do not want to block any new key presses from being registered. By remaining in a loop, we would prevent our key press code from ever running, causing this loop to never end. Perhaps inefficient, but much simpler than some sort of asynchronous checking.
+قد تنظر إلى هذا التنفيذ وتسأل "لماذا نقوم بإعادة تعيين العملية والمرور عبر تسلسل الجلب بأكمله مرة أخرى، بدلاً من القيام بذلك ببساطة في حلقة؟". ببساطة، بينما نريد أن توقف هذه العملية العمليات المستقبلية من التنفيذ، لا نريد أن توقف أي ضغطات مفاتيح جديدة من التسجيل. من خلال البقاء في حلقة، سنمنع تشغيل كود الضغط على المفتاح، مما يتسبب في عدم انتهاء هذه الحلقة أبدًا. ربما يكون هذا غير فعال، ولكنه أبسط بكثير من بعض أنواع الفحص غير المتزامن.
 
 ### FX15 - DT = VX
 
-This operation works the other direction from our previous *Delay Timer* instruction. We need someway to reset the *Delay Timer* to a value, and this instruction allows us to copy over a value from a *V Register* of our choosing.
+تعمل هذه العملية في الاتجاه المعاكس لعملية *مؤقت التأخير* السابقة. نحتاج إلى طريقة لإعادة تعيين *مؤقت التأخير* إلى قيمة، وتسمح لنا هذه العملية بنسخ قيمة من *سجل V* نختاره.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // DT = VX
     (0xF, _, 1, 5) => {
@@ -661,17 +661,17 @@ match (digit1, digit2, digit3, digit4) {
         self.dt = self.v_reg[x];
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### FX18 - ST = VX
 
-Almost the exact same instruction as the previous, however this time we are going to store the value from VX into our *Sound Timer*.
+تقريبًا نفس العملية السابقة، ولكن هذه المرة سنقوم بتخزين القيمة من VX في *مؤقت الصوت*.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // ST = VX
     (0xF, _, 1, 8) => {
@@ -679,17 +679,17 @@ match (digit1, digit2, digit3, digit4) {
         self.st = self.v_reg[x];
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
 ### FX1E - I += VX
 
-Instruction ANNN sets I to the encoded 0xNNN value, but sometimes it is useful to be able to simply increment the value. This instruction takes the value stored in VX and adds it to the *I Register*. In the case of an overflow, the register should simply roll over back to 0, which we can accomplish with Rust's `wrapping_add` method.
+تعمل العملية ANNN على تعيين I إلى القيمة المشفرة 0xNNN، ولكن في بعض الأحيان يكون من المفيد أن نتمكن من زيادة القيمة ببساطة. تأخذ هذه العملية القيمة المخزنة في VX وتضيفها إلى *سجل I*. في حالة التجاوز، يجب أن يعود السجل إلى 0، وهو ما يمكن تحقيقه باستخدام الدالة `wrapping_add` في Rust.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // I += VX
     (0xF, _, 1, 0xE) => {
@@ -698,29 +698,29 @@ match (digit1, digit2, digit3, digit4) {
         self.i_reg = self.i_reg.wrapping_add(vx);
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### FX29 - Set I to Font Address
+### FX29 - تعيين I إلى عنوان الخط
 
-This is another tricky instruction where it may not be clear how to progress at first. If you recall, we stored an array of font data at the very beginning of RAM when initializing the emulator. This instruction wants us to take from VX a number to print on screen (from 0 to 0xF), and store the RAM address of that sprite into the *I Register*. We are actually free to store those sprites anywhere we wanted, so long as we are consistent and point to them correctly here. However, we stored them in a very convenient location, at the beginning of RAM. Let me show you what I mean by printing out some of the sprites and their RAM locations.
+هذه عملية أخرى صعبة حيث قد لا يكون واضحًا كيفية المضي قدمًا في البداية. إذا كنت تتذكر، قمنا بتخزين مجموعة من بيانات الخط في بداية الذاكرة العشوائية (RAM) عند تهيئة المحاكي. تريد هذه العملية أن نأخذ من VX رقمًا لطباعته على الشاشة (من 0 إلى 0xF)، ونخزن عنوان الذاكرة العشوائية لهذا الـ sprite في *سجل I*. في الواقع، يمكننا تخزين هذه الـ sprites في أي مكان نريده، طالما أننا متسقون ونشير إليها بشكل صحيح هنا. ومع ذلك، قمنا بتخزينها في موقع مناسب جدًا، في بداية الذاكرة العشوائية. دعني أوضح لك ما أعنيه عن طريق طباعة بعض الـ sprites وعناوين الذاكرة العشوائية الخاصة بها.
 
-| Character | RAM Address |
-| --------- | ----------- |
-| 0         | 0           |
-| 1         | 5           |
-| 2         | 10          |
-| 3         | 15          |
-| ...       | ...         |
-| E (14)    | 70          |
-| F (15)    | 75          |
+| الحرف | عنوان الذاكرة العشوائية |
+| ----- | ----------------------- |
+| 0     | 0                       |
+| 1     | 5                       |
+| 2     | 10                      |
+| 3     | 15                      |
+| ...   | ...                     |
+| E (14)| 70                      |
+| F (15)| 75                      |
 
-You'll notice that since all of our font sprites take up five bytes each, their RAM address is simply their value times 5. If we happened to store the fonts in a different RAM address, we could still follow this rule, however we'd have to apply an offset to where the block begins.
+ستلاحظ أنه نظرًا لأن جميع الـ sprites الخاصة بالخط تأخذ خمسة بايتات لكل منها، فإن عنوان الذاكرة العشوائية الخاص بها هو ببساطة قيمتها مضروبة في 5. إذا قمنا بتخزين الخطوط في عنوان ذاكرة عشوائية مختلف، فلا يزال بإمكاننا اتباع هذه القاعدة، ولكن يجب علينا تطبيق إزاحة على مكان بدء الكتلة.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // I = FONT
     (0xF, _, 2, 9) => {
@@ -729,28 +729,28 @@ match (digit1, digit2, digit3, digit4) {
         self.i_reg = c * 5;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### FX33 - I = BCD of VX
+### FX33 - I = BCD لـ VX
 
-Most of the instructions for Chip-8 are rather self-explanitory, and can be implemented quite easily just by hearing a vague description. However, there are a few that are quite tricky, such as drawing to a screen and this one, storing the [Binary-Coded Decimal](https://en.wikipedia.org/wiki/Binary-coded_decimal) of a number stored in VX into the *I Register*. I encourage you to read up on BCD if you are unfamiliar with it, but a brief refresher goes like this. In this tutorial, we've been using hexadecimal quite a bit, which works by converting our normal decimal numbers into base-16, which is more easily understood by computers. For example, the decimal number 100 would become 0x64. This is good for computers, but not very accessible to humans, and certainly not to the general audience who are going to play your games. The main purpose of BCD is to convert a hexadecimal number back into a pseudo-decimal number to print out for the user, such as for your points or high scores. So while Chip-8 might store 0x64 internally, fetching its BCD would give us `0x1, 0x0, 0x0`, which we could print to the screen as "100". You'll notice that we've gone from one byte to three in order to store all three digits of our number, which is why we are going to store the BCD into RAM, beginning at the address currently in the *I Register* and moving along. Given that VX stores 8-bit numbers, which range from 0 to 255, we are always going to end up with three bytes, even if some are zero.
+معظم عمليات Chip-8 واضحة إلى حد ما، ويمكن تنفيذها بسهولة بمجرد سماع وصف غامض. ومع ذلك، هناك بعض العمليات الصعبة، مثل الرسم على الشاشة وهذه العملية، التي تقوم بتخزين [الرقم العشري المشفر ثنائيًا (BCD)](https://en.wikipedia.org/wiki/Binary-coded_decimal) لرقم مخزن في VX في *سجل I*. أشجعك على القراءة عن BCD إذا كنت غير معتاد عليها، ولكن هنا شرح سريع: في هذا البرنامج التعليمي، استخدمنا النظام الست عشري (hexadecimal) كثيرًا، والذي يعمل عن طريق تحويل أرقامنا العشرية العادية إلى نظام الأساس 16، وهو ما تفهمه أجهزة الكمبيوتر بسهولة أكبر. على سبيل المثال، الرقم العشري 100 سيصبح 0x64. هذا جيد لأجهزة الكمبيوتر، ولكنه ليس سهل الوصول للبشر، وبالتأكيد ليس للجمهور العام الذي سيلعب ألعابك. الغرض الرئيسي من BCD هو تحويل الرقم الست عشري مرة أخرى إلى رقم عشري شبه عشري لطباعته للمستخدم، مثل النقاط أو النتائج العالية. لذا بينما قد يخزن Chip-8 الرقم 0x64 داخليًا، فإن جلب BCD الخاص به سيعطينا `0x1, 0x0, 0x0`، والتي يمكننا طباعتها على الشاشة كـ "100". ستلاحظ أننا انتقلنا من بايت واحد إلى ثلاثة بايتات لتخزين جميع الأرقام الثلاثة لرقمنا، ولهذا السبب سنقوم بتخزين BCD في الذاكرة العشوائية، بدءًا من العنوان الموجود حاليًا في *سجل I* والمضي قدمًا. نظرًا لأن VX تخزن أرقامًا من 8 بت، والتي تتراوح من 0 إلى 255، فسنحصل دائمًا على ثلاثة بايتات، حتى إذا كانت بعضها صفرًا.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
     // BCD
     (0xF, _, 3, 3) => {
         let x = digit2 as usize;
         let vx = self.v_reg[x] as f32;
 
-        // Fetch the hundreds digit by dividing by 100 and tossing the decimal
+        // جلب رقم المئات عن طريق القسمة على 100 وإزالة الكسور
         let hundreds = (vx / 100.0).floor() as u8;
-        // Fetch the tens digit by dividing by 10, tossing the ones digit and the decimal
+        // جلب رقم العشرات عن طريق القسمة على 10، وإزالة رقم الآحاد والكسور
         let tens = ((vx / 10.0) % 10.0).floor() as u8;
-        // Fetch the ones digit by tossing the hundreds and the tens
+        // جلب رقم الآحاد عن طريق إزالة المئات والعشرات
         let ones = (vx % 10.0) as u8;
 
         self.ram[self.i_reg as usize] = hundreds;
@@ -758,21 +758,21 @@ match (digit1, digit2, digit3, digit4) {
         self.ram[(self.i_reg + 2) as usize] = ones;
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-For this implementation, I converted our VX value first into a `float`, so that I could use division and modulo arithmetic to get each decimal digit. This is not the fastest implementation nor is it probably the shortest. However, it is one of the easiest to understand. I'm sure there are some highly binary-savvy readers who are disgusted that I did it this way, but this solution is not for them. This is for readers who have never seen BCD before, where losing some speed for greater understanding is a better trade-off. However, once you have this implemented, I would encourage everyone to go out and look up more efficient BCD algorithms to add a bit of easy optimization into your code.
+بالنسبة لهذا التنفيذ، قمت بتحويل قيمة VX أولاً إلى `float`، حتى أتمكن من استخدام عمليات القسمة والـ modulo للحصول على كل رقم عشري. هذا ليس أسرع تنفيذ ولا الأقصر. ومع ذلك، فهو أحد أسهل الطرق للفهم. أنا متأكد من أن هناك بعض القراء المطلعين على النظام الثنائي الذين يشعرون بالاشمئزاز من أنني فعلت ذلك بهذه الطريقة، ولكن هذا الحل ليس لهم. هذا الحل موجه للقراء الذين لم يسبق لهم رؤية BCD من قبل، حيث أن فقدان بعض السرعة من أجل فهم أفضل هو مقايضة جيدة. ومع ذلك، بمجرد تنفيذ هذا، أشجع الجميع على البحث عن خوارزميات BCD أكثر كفاءة لإضافة بعض التحسينات السهلة إلى الكود.
 
-### FX55 - Store V0 - VX into I
+### FX55 - تخزين V0 - VX في I
 
-We're on the home stretch! These final two instructions populate our *V Registers* V0 thru the specified VX (inclusive) with the same range of values from RAM, beginning with the address in the *I Register*. This first one stores the values into RAM, while the next one will load them the opposite way.
+نحن على وشك الانتهاء! تقوم هاتان العمليتان الأخيرتان بملء *سجلات V* من V0 إلى VX المحدد (بما في ذلك) بنفس النطاق من القيم من الذاكرة العشوائية، بدءًا من العنوان الموجود في *سجل I*. تقوم العملية الأولى بتخزين القيم في الذاكرة العشوائية، بينما تقوم العملية التالية بتحميلها في الاتجاه المعاكس.
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // STORE V0 - VX
+    // تخزين V0 - VX
     (0xF, _, 5, 5) => {
         let x = digit2 as usize;
         let i = self.i_reg as usize;
@@ -781,17 +781,17 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### FX65 - Load I into V0 - VX
+### FX65 - تحميل I إلى V0 - VX
 
 ```rust
 match (digit1, digit2, digit3, digit4) {
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 
-    // LOAD V0 - VX
+    // تحميل V0 - VX
     (0xF, _, 6, 5) => {
         let x = digit2 as usize;
         let i = self.i_reg as usize;
@@ -800,12 +800,11 @@ match (digit1, digit2, digit3, digit4) {
         }
     },
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-### Final Thoughts
+### الأفكار النهائية
 
-That's it! With this, we now have a fully implemented Chip-8 CPU. You may have noticed a lot of possible opcode values are never covered, particularly in the 0x0000, 0xE000, and 0xF000 ranges. This is okay. These opcodes are left as undefined by the original design, and thus if any game attempts to use them it will lead to a runtime panic. If you are still curious following the completion of this emulator, there are a number of Chip-8 extensions which do fill in some of these gaps to add additional functionality, but they will not be covered by this guide.
-
+هذا كل شيء! مع هذا، أصبح لدينا الآن وحدة معالجة مركزية Chip-8 مكتملة التنفيذ. ربما لاحظت أن العديد من قيم الأوامر المشفرة (opcodes) لم يتم تغطيتها، خاصة في نطاقات 0x0000 و0xE000 و0xF000. هذا أمر طبيعي. هذه الأوامر المشفرة غير محددة في التصميم الأصلي، وبالتالي إذا حاولت أي لعبة استخدامها، فسيؤدي ذلك إلى حدوث خطأ في وقت التشغيل. إذا كنت لا تزال فضوليًا بعد الانتهاء من هذا المحاكي، فهناك عدد من امتدادات Chip-8 التي تملأ بعض هذه الفجوات لإضافة وظائف إضافية، ولكنها لن يتم تغطيتها في هذا الدليل.
 \newpage
