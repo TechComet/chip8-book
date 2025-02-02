@@ -1,17 +1,18 @@
-# An Introduction to Chip-8 Emulation using the Rust Programming Language
+# مقدمة إلى محاكاة Chip-8 باستخدام لغة البرمجة Rust
 
 https://github.com/aquova/chip8-book
 
-This is a introductory tutorial for how to develop your first Chip-8 emulator using the Rust language, targeting both desktop computers and web browsers via WebAssembly. This assumes no prior emulation experience, and only basic knowledge of Rust. The guide first gives a general overview of the different components of what emulation is, how all of the parts of the emulated system work, and what steps the emulation developer needs to implement them. Following this is a step-by-step walkthrough of the implementation of a Chip-8 emulator, describing each section of code and why it is needed.
+هذا برنامج تعليمي تمهيدي حول كيفية تطوير أول محاكاة لـ Chip-8 باستخدام لغة Rust، مع استهداف كل من أجهزة الكمبيوتر المكتبية ومتصفحات الويب عبر WebAssembly. يفترض هذا البرنامج التعليمي عدم وجود خبرة سابقة في المحاكاة، ومعرفة أساسية فقط بلغة Rust. يقدم الدليل أولاً نظرة عامة على المكونات المختلفة للمحاكاة، وكيف تعمل جميع أجزاء النظام المحاكى، وما هي الخطوات التي يحتاج مطور المحاكاة إلى تنفيذها. يتبع ذلك شرح تفصيلي خطوة بخطوة لتنفيذ محاكاة Chip-8، مع وصف كل قسم من الأكواد وسبب الحاجة إليه.
 
-- Source code for the completed emulator is found in `code`
-- Source code for the PDF book is in `src`
-- Sample Chip-8 ROMs are in `roms`
+- يمكن العثور على الكود المصدري للمحاكاة المكتملة في مجلد `code`
+- الكود المصدري لكتاب PDF موجود في مجلد `src`
+- نماذج ألعاب Chip-8 موجودة في مجلد `roms`
 
-You can download the latest copy of the book here: https://github.com/aquova/chip8-book/releases
+يمكنك تنزيل أحدث نسخة من الكتاب (المترجم) من هنا: https://github.com/TechComet/chip8-book/releases
+يمكنك تنزيل أحدث نسخة من الكتاب (النسخة الأصلية) من هنا: https://github.com/aquova/chip8-book/releases
 
-To build a copy of the PDF yourself, first install [pandoc](https://pandoc.org/) then run `make pdf` (or `make epub` for an ePub version). Details on how to setup the build environment for the source code are provided in the PDF, but once installed the completed emulator can be built with `make desktop` or `make web`
+لإنشاء نسخة من PDF بنفسك، قم أولاً بتثبيت [pandoc](https://pandoc.org/) ثم قم بتشغيل الأمر `make pdf` (أو `make epub` لنسخة ePub). يتم تقديم تفاصيل حول كيفية إعداد بيئة البناء للكود المصدري في ملف PDF، ولكن بمجرد التثبيت، يمكن بناء المحاكاة المكتملة باستخدام `make desktop` أو `make web`
 
-## Credits
+## الاعتمادات
 
-The provided Chip-8 games are supplied from [Zophar's Domain](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html). Original author unknown.
+تم توفير ألعاب Chip-8 من [Zophar's Domain](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html). المؤلف الأصلي غير معروف.
