@@ -1,49 +1,49 @@
-# Introduction to WebAssembly
+# مقدمة إلى WebAssembly
 
-This section will discuss how to take our finished emulator and configure it to run in a web browser via a relatively new technology called *WebAssembly*. I encourage you to [read more](https://en.wikipedia.org/wiki/WebAssembly) about WebAssembly. It is a format for compiling programs into a binary executable, similar in scope to an .exe, but are meant to be run within a web browser. It is supported by all of the major web browsers, and is a cross-company standard being developed between them. This means that instead of having to write web code in JavaScript or other web-centric languages, you can write it in any language that supports compilation of .wasm files and still be able to run in a browser. At the time of writing, C, C++, and Rust are the major languages which support it, fortunately for us.
+سنتحدث في هذا القسم عن كيفية تحويل المحاكي الذي أنشأناه لتشغيله في متصفح الويب باستخدام تقنية جديدة نسبيًا تسمى *WebAssembly*. أشجعك على [قراءة المزيد](https://en.wikipedia.org/wiki/WebAssembly) عن WebAssembly. إنها صيغة لتحويل البرامج إلى ملف تنفيذي ثنائي، مشابه في النطاق لملف .exe، ولكنها مخصصة للتشغيل داخل متصفح الويب. يتم دعمها من قبل جميع المتصفحات الرئيسية، وهي معيار متعدد الشركات يتم تطويره بينها. هذا يعني أنه بدلًا من الاضطرار إلى كتابة كود الويب باستخدام JavaScript أو لغات أخرى مخصصة للويب، يمكنك كتابته بأي لغة تدعم تحويل ملفات .wasm ولا يزال بإمكانك التشغيل في المتصفح. في وقت كتابة هذا الدليل، تعد C وC++ وRust اللغات الرئيسية التي تدعمها، ولحسن الحظ بالنسبة لنا.
 
-## Setting Up
+## الإعداد
 
-While we could cross-compile to the WebAssembly Rust targets ourselves, a useful set of tools called [wasm-pack](https://github.com/rustwasm/wasm-pack) has been developed to allow us to easily compile to WebAssembly without manually adding the appropriate targets and dependencies. You will need to install it via:
+بينما يمكننا التحويل يدويًا إلى أهداف WebAssembly في Rust، تم تطوير مجموعة من الأدوات المساعدة تسمى [wasm-pack](https://github.com/rustwasm/wasm-pack) لتسمح لنا بتحويل البرامج إلى WebAssembly بسهولة دون الحاجة إلى إضافة الأهداف والتبعيات يدويًا. ستحتاج إلى تثبيتها عبر:
 
 ```
 $ cargo install wasm-pack
 ```
 
-If you are on Windows the install might fail at the openssl-sys crate https://github.com/rustwasm/wasm-pack/issues/1108 and you will have to download it manually from https://rustwasm.github.io/wasm-pack/
+إذا كنت تستخدم Windows، قد يفشل التثبيت عند crate `openssl-sys` [راجع هذا الرابط](https://github.com/rustwasm/wasm-pack/issues/1108) وسيتعين عليك تنزيلها يدويًا من [هنا](https://rustwasm.github.io/wasm-pack/).
 
-I also mentioned that we will need to make a slight adjustment to our  `chip8_core` module to allow it to compile correctly to the `wasm` target. Rust uses a system called `wasm-bindgen` to create hooks that will work with WebAssembly. All of the `std` code we use is already fine, however we also use the `rand` crate in our backend, and it is not currently set to work correctly. Fortunately, it does support the functionality, we just need to enable it. In `chip8_core/Cargo.toml` we need to change
+كما ذكرت سابقًا، سنحتاج إلى إجراء تعديل بسيط على وحدة `chip8_core` الخاصة بنا للسماح لها بالتحويل بشكل صحيح إلى هدف `wasm`. يستخدم Rust نظامًا يسمى `wasm-bindgen` لإنشاء روابط تعمل مع WebAssembly. كل الكود الذي نستخدمه من `std` جاهز بالفعل، ولكننا نستخدم أيضًا crate `rand` في الواجهة الخلفية، وهي غير مهيأة للعمل بشكل صحيح. لحسن الحظ، تدعم هذه الوظيفة، نحتاج فقط إلى تمكينها. في ملف `chip8_core/Cargo.toml` نحتاج إلى تغيير:
 
 ```toml
 [dependencies]
 rand = "^0.7.3"
 ```
 
-to
+إلى:
 
 ```toml
 [dependencies]
 rand = { version = "^0.7.3", features = ["wasm-bindgen"] }
 ```
 
-All this does is specifies that we will require `rand` to include the `wasm-bindgen` feature upon compilation, which will allow it to work correctly in our WebAssembly binary.
+كل ما يفعله هذا هو تحديد أننا سنحتاج إلى تضمين ميزة `wasm-bindgen` في crate `rand` عند التحويل، مما يسمح لها بالعمل بشكل صحيح في ملف WebAssembly الثنائي.
 
-Note: In the time between writing this tutorial's code and finishing the write-up, the `rand` crate updated to version 0.8. Among other changes is that the `wasm-bindgen` feature has been removed. If you are wanting to use the most up-to-date `rand` crate, it appears that WebAssembly support has been moved out into its own separate crate. Since we are only using the most basic random function, I didn't feel the need to upgrade to 0.8, but if you wish to, it appears that additional integration would be required.
+ملاحظة: بين وقت كتابة كود هذا الدليل وإنهاء الكتابة، تم تحديث crate `rand` إلى الإصدار 0.8. من بين التغييرات الأخرى، تمت إزالة ميزة `wasm-bindgen`. إذا كنت ترغب في استخدام أحدث إصدار من crate `rand`، يبدو أن دعم WebAssembly تم نقله إلى crate منفصل. نظرًا لأننا نستخدم فقط الوظيفة العشوائية الأساسية، لم أشعر بالحاجة إلى الترقية إلى الإصدار 0.8، ولكن إذا كنت ترغب في ذلك، يبدو أن التكامل الإضافي مطلوب.
 
-That's the last time you will need to edit your  `chip8_core` module, everything else will be done in our new frontend. Let's set that up now. First, lets crate another Rust module via:
+هذه هي المرة الأخيرة التي ستحتاج فيها إلى تعديل وحدة `chip8_core` الخاصة بك، كل شيء آخر سيتم في الواجهة الأمامية الجديدة. لنقم بإعداد ذلك الآن. أولاً، لننشئ وحدة Rust جديدة عبر:
 
 ```
 $ cargo init wasm --lib
 ```
 
-This command may look familiar, it will create another new Rust library called `wasm`. Just like `desktop`, we will need to edit `wasm/Cargo.toml` to point to where  `chip8_core` is located.
+قد تبدو هذه الأوامر مألوفة، حيث ستقوم بإنشاء مكتبة Rust جديدة تسمى `wasm`. تمامًا مثل `desktop`، سنحتاج إلى تعديل `wasm/Cargo.toml` للإشارة إلى مكان وجود `chip8_core`.
 
 ```toml
 [dependencies]
 chip8_core = { path = "../chip8_core" }
 ```
 
-Now, a big difference between our `desktop` and our new `wasm` is that `desktop` was an executable project, it had a `main.rs` that we would compile and run. `wasm` will not have that, it is meant to be compiled into a .wasm file that we will load into a webpage. It is the webpage that will serve as the frontend, so let's add some basic HTML boilerplate, just to get us started. Create a new folder called `web` to hold the webpage specific code, and then create `web/index.html` and add basic HTML boilerplate.
+الآن، الفرق الكبير بين `desktop` وواجهة `wasm` الجديدة هو أن `desktop` كان مشروعًا تنفيذيًا، حيث كان يحتوي على `main.rs` والذي كنا نحمله ونشغله. `wasm` لن تحتوي على ذلك، فهي مخصصة للتحويل إلى ملف .wasm والذي سنحمله في صفحة ويب. ستكون صفحة الويب هي الواجهة الأمامية، لذا دعنا نضيف بعض القوالب الأساسية لصفحة HTML، فقط لبدء العمل. أنشئ مجلدًا جديدًا يسمى `web` لحفظ الكود المخصص لصفحة الويب، ثم أنشئ `web/index.html` وأضف قالب HTML الأساسي.
 
 ```html
 <!DOCTYPE html>
@@ -58,21 +58,21 @@ Now, a big difference between our `desktop` and our new `wasm` is that `desktop`
 </html>
 ```
 
-We'll add more to it later, but for now this will suffice. Our web program will not run if you simply open the file in a web browser, you will need to start a web server first. If you have Python 3 installed, which all modern Macs and many Linux distributions do, you can simply start a web server via:
+سنضيف المزيد لاحقًا، ولكن هذا يكفي حاليًا. لن يعمل برنامج الويب الخاص بنا إذا قمت ببساطة بفتح الملف في متصفح الويب، ستحتاج إلى بدء خادم ويب أولاً. إذا كان لديك Python 3 مثبتًا، وهو موجود في جميع أجهزة Mac الحديثة والعديد من توزيعات Linux، يمكنك ببساطة بدء خادم ويب عبر:
 
 ```
 $ python3 -m http.server
 ```
 
-Navigate to `localhost` in your web browser. If you ran this in the `web` directory, you should see our `index.html` page displayed. I've tried to find a simple, built-in way to start a local web server on Windows, and I haven't really found one. I personally use Python 3, but you are welcome to use any other similar service, such as `npm` or even some Visual Studio Code extensions. It doesn't matter which, just so they can host a local web page.
+انتقل إلى `localhost` في متصفح الويب الخاص بك. إذا قمت بتشغيل هذا في مجلد `web`، يجب أن ترى صفحة `index.html` معروضة. لقد حاولت العثور على طريقة بسيطة ومدمجة لبدء خادم ويب محلي على Windows، ولم أجد واحدة. أنا شخصيًا أستخدم Python 3، ولكنك مرحب باستخدام أي خدمة مشابهة أخرى، مثل `npm` أو حتى بعض إضافات Visual Studio Code. لا يهم أي منها، طالما يمكنها استضافة صفحة ويب محلية.
 
-## Defining our WebAssembly API
+## تعريف واجهة برمجة تطبيقات WebAssembly
 
-We have our  `chip8_core` created already, but we are now missing all of the functionality we added to `desktop`. Loading a file, handling key presses, telling it when to tick, etc. On the other hand, we have a web page that (will) run JavaScript, which needs to handle inputs from the user and display items. Our `wasm` crate is what goes in the middle. It will take inputs from JavaScript and convert them into the data types required by our  `chip8_core`.
+لدينا `chip8_core` جاهزة بالفعل، ولكننا نفتقد الآن جميع الوظائف التي أضفناها إلى `desktop`. تحميل ملف، التعامل مع ضغطات المفاتيح، إخبارها بالتنفيذ، إلخ. من ناحية أخرى، لدينا صفحة ويب (ستعمل) باستخدام JavaScript، والتي تحتاج إلى التعامل مع مدخلات المستخدم وعرض العناصر. وحدة `wasm` الخاصة بنا هي ما يقع في المنتصف. ستأخذ المدخلات من JavaScript وتحولها إلى أنواع البيانات المطلوبة من قبل `chip8_core`.
 
-Most importantly, we also need to somehow create a `chip8_core::Emu` object and keep it in scope for the entirety of our web page.
+الأهم من ذلك، نحتاج أيضًا إلى إنشاء كائن `chip8_core::Emu` والحفاظ عليه في النطاق طوال فترة عمل صفحة الويب.
 
-To begin, let's include a few external crates that we will need to allow Rust to interface with JavaScript. Open up `wasm/Cargo.toml` and add the following dependencies:
+للبدء، دعنا نضمّن بعض الحزم الخارجية التي سنحتاجها للسماح لـ Rust بالتفاعل مع JavaScript. افتح `wasm/Cargo.toml` وأضف التبعيات التالية:
 
 ```toml
 [dependencies]
@@ -85,16 +85,16 @@ version = "^0.3.46"
 features = []
 ```
 
-You'll notice that we're handling `web-sys` differently than other dependencies. That crate is structured in such a way that instead of getting everything it contains simply by including it in our `Cargo.toml`, we also need to specify additional "features" which come with the crate, but aren't available by default. Keep this file open, as we'll be adding to the `web_sys` features soon enough.
+ستلاحظ أننا نتعامل مع `web-sys` بشكل مختلف عن التبعيات الأخرى. تم تنظيم هذه الحزمة بطريقة تجعلنا بدلًا من الحصول على كل ما تحتويه ببساطة عن طريق تضمينها في `Cargo.toml`، نحتاج أيضًا إلى تحديد "ميزات" إضافية تأتي مع الحزمة، ولكنها غير متاحة بشكل افتراضي. ابق هذا الملف مفتوحًا، حيث سنضيف إلى ميزات `web_sys` قريبًا.
 
-Since this crate is going to be interfacing with another language, we need to specify how they are to communicate. Without getting too deep into the details, Rust can use the C language's ABI to easily communicate with other languages that support it, and it will greatly simplify our wasm binary to do so. So, we will need to tell `cargo` to use it. Add this in `wasm/Cargo.toml` as well:
+نظرًا لأن هذه الحزمة ستتفاعل مع لغة أخرى، نحتاج إلى تحديد كيفية التواصل بينهما. دون الخوض في التفاصيل، يمكن لـ Rust استخدام ABI لغة C للتواصل بسهولة مع اللغات الأخرى التي تدعمه، وسيُبسّط بشكل كبير ملف wasm الثنائي الخاص بنا للقيام بذلك. لذا، سنحتاج إلى إخبار `cargo` باستخدامه. أضف هذا أيضًا في `wasm/Cargo.toml`:
 
 ```toml
 [lib]
 crate-type = ["cdylib"]
 ```
 
-Excellent. Now to `wasm/src/lib.rs`. Let's create a struct that will house our `Emu` object as well as all the frontend functions we need to interface with JavaScript and operate. We'll also need to include all of our public items from  `chip8_core` as well.
+ممتاز. الآن إلى `wasm/src/lib.rs`. لنقم بإنشاء struct سيحتوي على كائن `Emu` الخاص بنا بالإضافة إلى جميع وظائف الواجهة الأمامية التي نحتاجها للتفاعل مع JavaScript والتشغيل. سنحتاج أيضًا إلى تضمين جميع العناصر العامة من `chip8_core`.
 
 ```rust
 use chip8_core::*;
@@ -106,7 +106,7 @@ pub struct EmuWasm {
 }
 ```
 
-Note the `#[wasm_bindgen]` tag, which tells the compiler that this struct needs to be configured for WebAssembly. Any function or struct that is going to be called from within JavaScript will need to have it. Let's also define the constructor.
+لاحظ العلامة `#[wasm_bindgen]`، والتي تخبر المترجم أن هذا الـ struct يحتاج إلى التهيئة لـ WebAssembly. أي دالة أو struct سيتم استدعاؤها من داخل JavaScript سيحتاج إلى وجودها. دعنا نحدد المُنشئ أيضًا.
 
 ```rust
 use chip8_core::*;
@@ -128,14 +128,14 @@ impl EmuWasm {
 }
 ```
 
-Pretty straight-forward. The biggest thing to note is that the `new` method requires the special `constructor` inclusion so the compiler knows what we're trying to do.
+بسيط جدًا. أهم شيء يجب ملاحظته هو أن الدالة `new` تتطلب تضمين `constructor` الخاص حتى يعرف المترجم ما نحاول القيام به.
 
-Now we have a struct containing our `chip8` emulation core object. Here, we will implement the same methods that we needed by our `desktop` frontend, such as passing key presses/releases to the core, loading in a file, and ticking. Let's begin with ticking the CPU and the timers, as it's the easiest.
+الآن لدينا struct يحتوي على كائن محاكاة `chip8` الأساسي. هنا، سننفذ نفس الطرق التي احتجناها في الواجهة الأمامية لـ `desktop`، مثل تمرير ضغطات/إفلاتات المفاتيح إلى النواة، تحميل ملف، والتنفيذ. لنبدأ بتنفيذ CPU والموقتات، حيث أنها الأسهل.
 
 ```rust
 #[wasm_bindgen]
 impl EmuWasm {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     #[wasm_bindgen]
     pub fn tick(&mut self) {
@@ -149,9 +149,9 @@ impl EmuWasm {
 }
 ```
 
-That's it, these are just thin wrappers to call the corresponding functions in the  `chip8_core`. These functions don't take any input, so there's nothing fancy for them to do except, well, tick.
+هذا كل شيء، هذه مجرد أغلفة رقيقة لاستدعاء الدوال المقابلة في `chip8_core`. هذه الدوال لا تأخذ أي مدخلات، لذا لا يوجد شيء معقد عليها سوى التنفيذ.
 
-Remember the `reset` function we created in the  `chip8_core`, but then never used? Well, we'll get to use it now. This will be a wrapper just like the previous two functions.
+تذكر دالة `reset` التي أنشأناها في `chip8_core`، ولكننا لم نستخدمها أبدًا؟ حسنًا، سنستخدمها الآن. ستكون هذه مجرد غلاف مثل الدوال السابقة.
 
 ```rust
 #[wasm_bindgen]
@@ -160,7 +160,7 @@ pub fn reset(&mut self) {
 }
 ```
 
-Key pressing is the first of these functions that will deviate from what was done in `desktop`. This works in a similar fashion to what we did for `desktop`, but rather than taking in an SDL key press, we'll need to accept one from JavaScript. I promised we'd add some `web-sys` features, so lets do so now. Back in `wasm/Cargo.toml` add the `KeyboardEvent` feature
+ضغط المفاتيح هو أول هذه الدوال التي ستنحرف عما تم في `desktop`. يعمل هذا بطريقة مشابهة لما فعلناه في `desktop`، ولكن بدلًا من أخذ ضغطة مفتاح SDL، سنحتاج إلى قبول واحدة من JavaScript. لقد وعدت بإضافة بعض ميزات `web-sys`، لذا لنفعل ذلك الآن. عد إلى `wasm/Cargo.toml` وأضف ميزة `KeyboardEvent`.
 
 ```toml
 [dependencies.web-sys]
@@ -173,10 +173,10 @@ features = [
 ```rust
 use web_sys::KeyboardEvent;
 
-// -- Unchanged code omitted --
+// -- الكود غير المتغير محذوف --
 
 impl EmuWasm {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     #[wasm_bindgen]
     pub fn keypress(&mut self, evt: KeyboardEvent, pressed: bool) {
@@ -210,16 +210,16 @@ fn key2btn(key: &str) -> Option<usize> {
 }
 ```
 
-This is very similar to our implementation for our `desktop`, except we are going to take in a JavaScript `KeyboardEvent`, which will result in a string for us to parse. Note that the key strings are case sensitive, so keep everything lowercase unless you want your players to hold down shift a lot.
+هذا مشابه جدًا لتنفيذنا في `desktop`، إلا أننا سنأخذ حدث `KeyboardEvent` من JavaScript، والذي سيؤدي إلى سلسلة نصية لتحليلها. لاحظ أن سلاسل المفاتيح حساسة لحالة الأحرف، لذا حافظ على كل شيء بأحرف صغيرة إلا إذا كنت تريد من اللاعبين الضغط على Shift كثيرًا.
 
-A similar story awaits us when we load a game, it will follow a similar style, except we will need to receive and handle a JavaScript object.
+قصة مشابهة تنتظرنا عند تحميل لعبة، ستتبع نمطًا مشابهًا، إلا أننا سنحتاج إلى استقبال ومعالجة كائن JavaScript.
 
 ```rust
 use js_sys::Uint8Array;
-// -- Unchanged code omitted --
+// -- الكود غير المتغير محذوف --
 
 impl EmuWasm {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     #[wasm_bindgen]
     pub fn load_game(&mut self, data: Uint8Array) {
@@ -228,11 +228,11 @@ impl EmuWasm {
 }
 ```
 
-The only thing remaining is our function to actually render to a screen. I'm going to create an empty function here, but we'll hold off on implementing it for now, instead we'll turn our attention back to our web page, and begin working from the other direction.
+الشيء الوحيد المتبقي هو دالة الرسم الفعلية على الشاشة. سأقوم بإنشاء دالة فارغة هنا، ولكننا سنؤجل تنفيذها حاليًا، بدلًا من ذلك سنوجه انتباهنا مرة أخرى إلى صفحة الويب، ونبدأ العمل من الاتجاه الآخر.
 
 ```rust
 impl EmuWasm {
-    // -- Unchanged code omitted --
+    // -- الكود غير المتغير محذوف --
 
     #[wasm_bindgen]
     pub fn draw_screen(&mut self, scale: usize) {
@@ -241,11 +241,11 @@ impl EmuWasm {
 }
 ```
 
-We'll come back here once we get our JavaScript setup and we know exactly how we're going to draw.
+سنعود إلى هنا بمجرد إعداد JavaScript الخاص بنا ومعرفة كيفية الرسم بالضبط.
 
-## Creating our Frontend Functionality
+## إنشاء وظائف الواجهة الأمامية
 
-Time to get our hands dirty in JavaScript. First, let's add some additional elements to our very bland web page. When we created the emulator to run on a PC, we used SDL to create a window to draw upon. For a web page, we will use an element HTML5 gives us called a *canvas*. We'll also go ahead and point our web page to our (currently non-existent) JS script.
+حان الوقت للتعمق في JavaScript. أولاً، دعنا نضيف بعض العناصر الإضافية إلى صفحة الويب البسيطة جدًا. عندما أنشأنا المحاكي للتشغيل على جهاز كمبيوتر، استخدمنا SDL لإنشاء نافذة للرسم عليها. بالنسبة لصفحة الويب، سنستخدم عنصرًا يوفره لنا HTML5 يسمى *canvas*. سنقوم أيضًا بالإشارة إلى صفحة الويب الخاصة بنا إلى النص البرمجي JS (غير الموجود حاليًا).
 
 ```html
 <!DOCTYPE html>
@@ -265,17 +265,17 @@ Time to get our hands dirty in JavaScript. First, let's add some additional elem
 </html>
 ```
 
-We added three things here, first a button which when clicked will allow the users to select a Chip-8 game to run. Secondly, the `canvas` element, which includes a brief message for any unfortunate users with an out of date browser. Finally we told our web page to also load the `index.js` script we are about to create. Note that at the time of writing, in order to load a .wasm file via JavaScript, you need to specify that it is of `module` type.
+أضفنا هنا ثلاثة أشياء، أولاً زرًا يسمح للمستخدمين باختيار لعبة Chip-8 لتشغيلها عند النقر عليه. ثانيًا، عنصر `canvas`، والذي يتضمن رسالة قصيرة لأي مستخدمين غير محظوظين لديهم متصفح قديم. أخيرًا أخبرنا صفحة الويب بتحميل النص البرمجي `index.js` الذي سنقوم بإنشائه. لاحظ أنه في وقت كتابة هذا الدليل، من أجل تحميل ملف .wasm عبر JavaScript، تحتاج إلى تحديد أنه من نوع `module`.
 
-Now, let's create `index.js` and we'll define some items we'll need. First, we need to tell JavaScript to load in our WebAssembly functions. Now, we aren't going to load it in directly here. When we compile with `wasm-pack`, it will generate not only our .wasm file, but also an auto-generated JavaScript "glue" that will wrap each function we defined around a JavaScript function we then can use here.
+الآن، لنقم بإنشاء `index.js` ونحدد بعض العناصر التي سنحتاجها. أولاً، نحتاج إلى إخبار JavaScript بتحميل وظائف WebAssembly. الآن، لن نقوم بتحميلها مباشرة هنا. عندما نستخدم `wasm-pack` للتحويل، سيتم إنشاء ليس فقط ملف .wasm الخاص بنا، ولكن أيضًا "صمغ" JavaScript الذي سيلف كل دالة قمنا بتعريفها حول دالة JavaScript يمكننا استخدامها هنا.
 
 ```js
 import init, * as wasm from "./wasm.js"
 ```
 
-This imports all of our functions, as well as a special `init` function that will need to be called first before we can use anything from `wasm`.
+هذا يستورد جميع وظائفنا، بالإضافة إلى دالة خاصة `init` سيحتاج إلى استدعائها أولاً قبل أن نتمكن من استخدام أي شيء من `wasm`.
 
-Let's define some constants and do some basic setup now.
+لنقم بتعريف بعض الثوابت وإجراء بعض الإعدادات الأساسية الآن.
 
 ```js
 import init, * as wasm from "./wasm.js"
@@ -297,9 +297,9 @@ ctx.fillRect(0, 0, WIDTH * SCALE, HEIGHT * SCALE)
 const input = document.getElementById("fileinput")
 ```
 
-All of this will look familiar from our `desktop` build. We fetch the HTML canvas and adjust its size to the dimension of our Chip-8 screen, plus scaled up a bit (feel free to adjust this for your preferences).
+كل هذا سيبدو مألوفًا من بناء `desktop` الخاص بنا. نحن نحصل على لوحة HTML ونضبط حجمها إلى أبعاد شاشة Chip-8 الخاصة بنا، بالإضافة إلى تكبيرها قليلاً (لا تتردد في تعديل هذا وفقًا لتفضيلاتك).
 
-Let's create a main `run` function that will load our `EmuWasm` object and handle the main emulation.
+لنقم بإنشاء وظيفة رئيسية `run` والتي ستحمّل كائن `EmuWasm` الخاص بنا وتتعامل مع المحاكاة الرئيسية.
 
 ```js
 async function run() {
@@ -315,31 +315,31 @@ async function run() {
     })
 
     input.addEventListener("change", function(evt) {
-        // Handle file loading
+        // التعامل مع تحميل الملف
     }, false)
 }
 
 run().catch(console.error)
 ```
 
-Here, we called the mandatory `init` function which tells our browser to initialize our WebAssembly binary before we use it. We then create our emulator backend by making a new `EmuWasm` object.
+هنا، قمنا باستدعاء الوظيفة الإلزامية `init` التي تخبر متصفحنا بتهيئة ثنائي WebAssembly قبل أن نستخدمه. ثم نقوم بإنشاء محاكي الخلفية الخاص بنا عن طريق إنشاء كائن جديد `EmuWasm`.
 
-We will now handle loading in a file when our button is pressed.
+سنقوم الآن بالتعامل مع تحميل ملف عند الضغط على الزر.
 
 ```js
 input.addEventListener("change", function(evt) {
-    // Stop previous game from rendering, if one exists
+    // إيقاف عرض اللعبة السابقة، إذا كانت موجودة
     if (anim_frame != 0) {
         window.cancelAnimationFrame(anim_frame)
     }
 
     let file = evt.target.files[0]
     if (!file) {
-        alert("Failed to read file")
+        alert("فشل في قراءة الملف")
         return
     }
 
-    // Load in game as Uint8Array, send to .wasm, start main loop
+    // تحميل اللعبة كـ Uint8Array، إرسالها إلى .wasm، بدء الحلقة الرئيسية
     let fr = new FileReader()
     fr.onload = function(e) {
         let buffer = fr.result
@@ -355,22 +355,22 @@ function mainloop(chip8) {
 }
 ```
 
-This function adds an event listener to our `input` button which is triggered whenever it is clicked. Our `desktop` frontend used SDL to manage not only drawing to a window, but only to ensure that we were running at 60 FPS. The analogous feature for canvases is the "Animation Frames". Anytime we want to render something to the canvas, we request the window to animate a frame, and it will wait until the correct time has elapsed to ensure 60 FPS performance. We'll see how this works in a moment, but for now, we need to tell our program that if we're loading a new game, we need to stop the previous animation. We'll also reset our emulator before we load in the ROM, to ensure everything is just as it started, without having to reload the webpage.
+تضيف هذه الوظيفة مستمع حدث إلى زر `input` الخاص بنا والذي يتم تشغيله عند النقر عليه. استخدم واجهة `desktop` الأمامية SDL لإدارة الرسم في النافذة، وكذلك للتأكد من أننا نعمل بسرعة 60 إطارًا في الثانية. الميزة المماثلة للوحات هي "إطارات الرسوم المتحركة". في أي وقت نريد عرض شيء ما على اللوحة، نطلب من النافذة تحريك إطار، وسوف تنتظر حتى ينقضي الوقت الصحيح لضمان أداء 60 إطارًا في الثانية. سنرى كيف يعمل هذا في لحظة، ولكن الآن، نحتاج إلى إخبار برنامجنا أنه إذا كنا نحمّل لعبة جديدة، نحتاج إلى إيقاف الرسوم المتحركة السابقة. سنقوم أيضًا بإعادة تعيين المحاكي قبل تحميل ROM، للتأكد من أن كل شيء كما بدأ، دون الحاجة إلى إعادة تحميل صفحة الويب.
 
-Following that, we look at the file that the user has pointed us to. We don't need to check if it's actually a Chip-8 program, but we do need to make sure that it is a file of some sort. We then read it in and pass it to our backend via our `EmuWasm` object. Once the game is loaded, we can jump into our main emulation loop!
+بعد ذلك، ننظر إلى الملف الذي أشار إليه المستخدم. لا نحتاج إلى التحقق مما إذا كان برنامج Chip-8 فعليًا، ولكننا نحتاج إلى التأكد من أنه ملف من نوع ما. ثم نقوم بقراءته وتمريره إلى الخلفية عبر كائن `EmuWasm` الخاص بنا. بمجرد تحميل اللعبة، يمكننا القفز إلى حلقة المحاكاة الرئيسية!
 
 ```js
 function mainloop(chip8) {
-    // Only draw every few ticks
+    // الرسم فقط كل بضع دورات
     for (let i = 0; i < TICKS_PER_FRAME; i++) {
         chip8.tick()
     }
     chip8.tick_timers()
 
-    // Clear the canvas before drawing
+    // مسح اللوحة قبل الرسم
     ctx.fillStyle = "black"
     ctx.fillRect(0, 0, WIDTH * SCALE, HEIGHT * SCALE)
-    // Set the draw color back to white before we render our frame
+    // إعادة تعيين لون الرسم إلى الأبيض قبل عرض الإطار
     ctx.fillStyle = "white"
     chip8.draw_screen(SCALE)
 
@@ -380,25 +380,25 @@ function mainloop(chip8) {
 }
 ```
 
-This should look very similar to what we did for our `desktop` frontend. We tick several times before clearing the canvas and telling our `EmuWasm` object to draw the current frame to our canvas. Here is where we tell our window that we would like to render a frame, and we also save its ID for if we need to cancel it above. The `requestAnimationFrame` will wait to ensure 60 FPS performance, and then restart our `mainloop` when it is time, beginning the process all over again.
+يجب أن يبدو هذا مشابهًا جدًا لما فعلناه لواجهة `desktop` الأمامية. نقوم بالتنفيذ عدة مرات قبل مسح اللوحة وإخبار كائن `EmuWasm` الخاص بنا برسم الإطار الحالي على اللوحة. هنا نخبر النافذة أننا نرغب في عرض إطار، ونحتفظ بمعرفها إذا احتجنا إلى إلغائه أعلاه. سوف ينتظر `requestAnimationFrame` لضمان أداء 60 إطارًا في الثانية، ثم يعيد تشغيل `mainloop` عندما يحين الوقت، ويبدأ العملية من جديد.
 
-## Compiling our WebAssembly binary
+## تجميع ثنائي WebAssembly الخاص بنا
 
-Before we go any further, let's now try and build our Rust code and ensure that it can be loaded by our web page without issue. `wasm-pack` will handle the compilation of our .wasm binary, but we also need to specify that we don't wish to use any web packing systems like `npm`. To build, change directories into the `wasm` folder and run:
+قبل أن نذهب أبعد من ذلك، دعنا نحاول بناء كود Rust الخاص بنا ونتأكد من أنه يمكن تحميله بواسطة صفحة الويب دون مشاكل. سيتعامل `wasm-pack` مع تجميع ثنائي .wasm، ولكننا نحتاج أيضًا إلى تحديد أننا لا نرغب في استخدام أي أنظمة حزم ويب مثل `npm`. للبناء، قم بتغيير الدلائل إلى مجلد `wasm` وقم بتشغيل:
 
 ```
 $ wasm-pack build --target web
 ```
 
-Once it is completed, the targets will be built into a new `pkg` directory. There are several items in here, but the only ones we need are `wasm_bg.wasm` and `wasm.js`. `wasm_bg.wasm` is the combination of our `wasm` and  `chip8_core` Rust crates compiled into one, and `wasm.js` is the JavaScript "glue" that we included earlier. It is mainly wrappers around the API we defined in `wasm` as well as some initialization code. It is actually quite readable, so it's worth taking a look at what it is doing.
+بمجرد اكتماله، سيتم بناء الأهداف في دليل جديد `pkg`. هناك عدة عناصر هنا، ولكن الوحيدة التي نحتاجها هي `wasm_bg.wasm` و `wasm.js`. `wasm_bg.wasm` هو مزيج من حزمتي `wasm` و `chip8_core` Rust المترجمة في واحدة، و `wasm.js` هو "الغراء" JavaScript الذي أدرجناه سابقًا. إنه في الغالب أغلفة حول API الذي حددناه في `wasm` بالإضافة إلى بعض كود التهيئة. إنه في الواقع قابل للقراءة إلى حد ما، لذا فإن الأمر يستحق النظر إلى ما يفعله.
 
-Running the page in a local web server should allow you to pick and load a game without any warnings coming up in the browser's console. However, we haven't written the screen rendering function yet, so let's finish that so we can see our game actually run.
+تشغيل الصفحة في خادم ويب محلي يجب أن يسمح لك باختيار وتحميل لعبة دون ظهور أي تحذيرات في وحدة تحكم المتصفح. ومع ذلك، لم نكتب وظيفة عرض الشاشة بعد، لذا دعنا ننهي ذلك حتى نتمكن من رؤية لعبتنا تعمل بالفعل.
 
-## Drawing to the canvas
+## الرسم على اللوحة
 
-Here is the final step, rendering to the screen. We created an empty `draw_screen` function in our `EmuWasm` object, and we call it at the right time, but it currently doesn't do anything. Now, there are two ways we could handle this. We could either pass the frame buffer into JavaScript and render it, or we could obtain our canvas in our `EmuWasm` binary and render to it in Rust. Either method would work fine, but personally I found that handling the rendering in Rust is easier.
+هذه هي الخطوة الأخيرة، العرض على الشاشة. لقد أنشأنا وظيفة `draw_screen` فارغة في كائن `EmuWasm` الخاص بنا، ونستدعيها في الوقت المناسب، ولكنها حاليًا لا تفعل أي شيء. الآن، هناك طريقتان يمكننا التعامل مع هذا. يمكننا إما تمرير إطار العرض إلى JavaScript وعرضه، أو يمكننا الحصول على لوحتنا في ثنائي `EmuWasm` الخاص بنا وعرضها في Rust. أي من الطريقتين ستكون جيدة، ولكن شخصيًا وجدت أن التعامل مع العرض في Rust أسهل.
 
-We've used the `web_sys` crate to handle JavaScript `KeyboardEvents` in Rust, but it has the functionality to manage many more JavaScript elements. Again, the ones we wish to use will need to be defined as features in `wasm/Cargo.toml`.
+لقد استخدمنا الحزمة `web_sys` للتعامل مع أحداث `KeyboardEvent` في JavaScript في Rust، ولكن لديها وظائف لإدارة العديد من عناصر JavaScript الأخرى. مرة أخرى، تلك التي نرغب في استخدامها تحتاج إلى تعريفها كسمات في `wasm/Cargo.toml`.
 
 ```toml
 [dependencies.web-sys]
@@ -414,7 +414,7 @@ features = [
 ]
 ```
 
-Here is an overview of our next steps. In order to render to an HTML5 canvas, you need to obtain the canvas object and its *context* which is the object which gets the draw functions called upon it. Since our WebAssembly binary has been loaded by our webpage, it has access to all of its elements just as a JS script would. We will change our `new` constructor to grab the current window, canvas, and context much like you would in JavaScript.
+هذه نظرة عامة على خطواتنا التالية. من أجل العرض على لوحة HTML5، تحتاج إلى الحصول على كائن اللوحة و*سياقها* وهو الكائن الذي يتم استدعاء وظائف الرسم عليه. نظرًا لأن ثنائي WebAssembly الخاص بنا تم تحميله بواسطة صفحة الويب الخاصة بنا، فإنه يمكنه الوصول إلى جميع عناصرها تمامًا كما يفعل نص JS. سنقوم بتغيير المُنشئ `new` للحصول على النافذة الحالية، اللوحة، والسياق كما تفعل في JavaScript.
 
 ```rust
 use wasm_bindgen::JsCast;
@@ -447,11 +447,11 @@ impl EmuWasm {
         Ok(EmuWasm{chip8, ctx})
     }
 
-    // -- Unchanged code omitted --
+    // -- كود غير متغير محذوف --
 }
 ```
 
-This should look pretty familiar to those who have done JavaScript programming before. We grab our current window's canvas and get its 2D context, which is saved as a member variable of our `EmuWasm` struct. Now that we have an actual context to render to, we can update our `draw_screen` function to draw to it.
+يجب أن يبدو هذا مألوفًا لأولئك الذين قاموا ببرمجة JavaScript من قبل. نحن نحصل على لوحة النافذة الحالية ونحصل على سياقها ثنائي الأبعاد، والذي يتم حفظه كمتغير عضو في بنية `EmuWasm` الخاصة بنا. الآن بعد أن أصبح لدينا سياق فعلي للرسم عليه، يمكننا تحديث وظيفة `draw_screen` للرسم عليه.
 
 ```rust
 #[wasm_bindgen]
@@ -472,11 +472,11 @@ pub fn draw_screen(&mut self, scale: usize) {
 }
 ```
 
-We get the display buffer from our `chip8_core` and iterate through every pixel. If set, we draw it scaled up to the value passed in by our frontend. Don't forget that we already cleared the canvas to black and set the draw color to white before calling `draw_screen`, so it doesn't need to be done here.
+نحصل على مخزن عرض من `chip8_core` الخاص بنا ونكرر عبر كل بكسل. إذا تم تعيينه، نرسمه مكبرًا إلى القيمة التي تم تمريرها من واجهتنا الأمامية. لا تنس أننا قمنا بالفعل بمسح اللوحة إلى الأسود وتعيين لون الرسم إلى الأبيض قبل استدعاء `draw_screen`، لذا لا يحتاج إلى القيام بذلك هنا.
 
-That does it! The implementation is done. All that remains is to build it and try it for ourself.
+هذا كل شيء! التنفيذ انتهى. كل ما تبقى هو بناؤه وتجربته بأنفسنا.
 
-Rebuild by moving into the `wasm` directory and running:
+أعد البناء عن طريق الانتقال إلى دليل `wasm` وتشغيل:
 
 ```
 $ wasm-pack build --target web
@@ -484,6 +484,6 @@ $ mv pkg/wasm_bg.wasm ../web
 $ mv pkg/wasm.js ../web
 ```
 
-Now start your web server and pick a game. If everything has gone well, you should be able to play Chip-8 games just as well in the browser as on the desktop!
+الآن ابدأ خادم الويب الخاص بك واختر لعبة. إذا سار كل شيء على ما يرام، يجب أن تكون قادرًا على لعب ألعاب Chip-8 في المتصفح بنفس جودة سطح المكتب!
 
 \newpage
