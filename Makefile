@@ -14,7 +14,7 @@ pdf:
 
 epub:
 	cd src && \
-	pandoc -s -o chip8.epub \
+	pandoc --css=rtl.css -s -o chip8.epub \
 		1-intro.md \
 		2-basics.md \
 		3-setup.md \
