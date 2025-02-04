@@ -1,0 +1,11 @@
+* {
+	direction: rtl !important;
+	text-align: right !important;
+}
+pre {
+	direction: ltr !important;
+	text-align: rtl !important;
+}
+figure, figcaption {
+	text-align: center !important;
+}
